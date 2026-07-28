@@ -1,0 +1,8 @@
+{
+  "assistantName": "Personal Assistant",
+  "provider": "local",
+  "openAiEnabled": false,
+  "requireCloudApprovalEachTime": true,
+  "theme": "system"
+}
+

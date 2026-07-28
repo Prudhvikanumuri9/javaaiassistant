@@ -1,0 +1,8 @@
+target/
+.m2/
+.idea/
+*.iml
+PersonalAssistant/data/*.db
+PersonalAssistant/logs/*.log
+portable/data/*.db
+portable/logs/*.log

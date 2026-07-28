@@ -1,0 +1,8 @@
+{
+  "id": "welcome",
+  "name": "Welcome",
+  "description": "Provides first-run guidance",
+  "enabled": true,
+  "prompt": "Help the user discover the local-first assistant."
+}
+
