@@ -4,10 +4,28 @@ The default experience is now a local Spring Boot home organizer at
 `http://127.0.0.1:8787`. It includes:
 
 - Camera capture and photo-backed household inventory
+- Protected local-AI chat with inventory, meal, and shopping context
+- Independent reasoning-model and vision-model selectors
 - Quantities, storage locations, minimum stock, and expiration dates
 - Weekly cooking and meal planning
 - A shopping list calculated from planned ingredients minus current inventory
 - Local SQLite storage in `data/home.db` and photos in `data/item-photos/`
+
+## Web assistant and model switching
+
+Open **AI assistant** in the web navigation. The assistant reads a current
+snapshot of inventory, this week's meals, and calculated shopping shortages
+before answering. It is intentionally read-only: it may suggest changes, but
+inventory and plans are changed only through their dedicated screens.
+
+Every `.gguf` file in `models/language/` appears in the **Reasoning model**
+selector. Changing the selection stops the current local reasoning server and
+loads the chosen model with the next question. The choice is saved in
+`config/model-selection.properties`.
+
+Vision is a separate provider and selector backed by `models/vision/`; captured
+images are never sent to the reasoning model. A compatible local vision runtime
+and model must be installed before automatic image labels become available.
 
 Start the packaged application:
 

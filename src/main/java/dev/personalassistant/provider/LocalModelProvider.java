@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
+import java.util.Properties;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
@@ -30,7 +31,8 @@ public final class LocalModelProvider implements AssistantProvider {
     public record Platform(String os, String architecture, String nativeDirectory) {}
     private final Path home;
     private final Path executable;
-    private final Path model;
+    private volatile Path model;
+    private final Path selectionFile;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
     private Process server;
 
@@ -39,7 +41,8 @@ public final class LocalModelProvider implements AssistantProvider {
         Platform platform = detectPlatform();
         String executableName = platform.os().equals("windows") ? "llama-server.exe" : "llama-server";
         this.executable = home.resolve("native").resolve(platform.nativeDirectory()).resolve(executableName);
-        this.model = findModel(home.resolve("models/language"));
+        this.selectionFile = home.resolve("config/model-selection.properties");
+        this.model = loadSelectedModel();
     }
 
     public static Platform detectPlatform() {
@@ -67,6 +70,65 @@ public final class LocalModelProvider implements AssistantProvider {
         return CompletableFuture.supplyAsync(() -> generate(history, skills));
     }
 
+    public List<String> models() {
+        Path directory = home.resolve("models/language");
+        if (!Files.isDirectory(directory)) return List.of();
+        try (Stream<Path> files = Files.list(directory)) {
+            return files.filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".gguf"))
+                    .map(path -> path.getFileName().toString())
+                    .sorted(String.CASE_INSENSITIVE_ORDER)
+                    .toList();
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot inspect language models", e);
+        }
+    }
+
+    public String selectedModel() {
+        return model == null ? "" : model.getFileName().toString();
+    }
+
+    public synchronized void selectModel(String filename) {
+        Path candidate = home.resolve("models/language").resolve(Path.of(filename).getFileName()).normalize();
+        if (!candidate.startsWith(home.resolve("models/language").normalize())
+                || !Files.isRegularFile(candidate) || !filename.toLowerCase(Locale.ROOT).endsWith(".gguf")) {
+            throw new IllegalArgumentException("Language model not found: " + filename);
+        }
+        if (server != null && server.isAlive()) server.destroy();
+        server = null;
+        model = candidate;
+        try {
+            Files.createDirectories(selectionFile.getParent());
+            Properties properties = new Properties();
+            if (Files.isRegularFile(selectionFile)) {
+                try (var input = Files.newInputStream(selectionFile)) {
+                    properties.load(input);
+                }
+            }
+            properties.setProperty("reasoningModel", filename);
+            try (var output = Files.newOutputStream(selectionFile)) {
+                properties.store(output, "Personal Assistant model selection");
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Cannot save model selection", e);
+        }
+    }
+
+    private Path loadSelectedModel() {
+        if (Files.isRegularFile(selectionFile)) {
+            try (var input = Files.newInputStream(selectionFile)) {
+                Properties properties = new Properties();
+                properties.load(input);
+                String selected = properties.getProperty("reasoningModel", "");
+                Path candidate = home.resolve("models/language").resolve(Path.of(selected).getFileName());
+                if (!selected.isBlank() && Files.isRegularFile(candidate)) return candidate;
+            } catch (IOException ignored) {
+                // Fall back to the first installed model.
+            }
+        }
+        return findModel(home.resolve("models/language"));
+    }
+
     private String generate(List<ChatMessage> history, List<Skill> skills) {
         if (!available()) {
             throw new IllegalStateException("Local runtime or GGUF model is missing beside the application.");
@@ -80,7 +142,11 @@ public final class LocalModelProvider implements AssistantProvider {
             ArrayNode messages = requestBody.putArray("messages");
             ObjectNode system = messages.addObject();
             system.put("role", "system");
-            system.put("content", systemPrompt(skills));
+            StringBuilder systemContent = new StringBuilder(systemPrompt(skills));
+            history.stream()
+                    .filter(message -> message.role() == ChatMessage.Role.SYSTEM)
+                    .forEach(message -> systemContent.append("\n\n").append(message.content()));
+            system.put("content", systemContent.toString());
             for (ChatMessage message : history) {
                 if (message.role() == ChatMessage.Role.SYSTEM) continue;
                 ObjectNode item = messages.addObject();

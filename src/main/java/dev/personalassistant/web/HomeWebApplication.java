@@ -1,6 +1,9 @@
 package dev.personalassistant.web;
 
 import dev.personalassistant.home.HomeDatabase;
+import dev.personalassistant.data.Database;
+import dev.personalassistant.provider.LocalModelProvider;
+import dev.personalassistant.provider.LocalVisionProvider;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
@@ -16,6 +19,24 @@ public class HomeWebApplication {
     HomeDatabase homeDatabase() {
         Path home = Path.of(System.getProperty("personalassistant.home", ".")).toAbsolutePath();
         return new HomeDatabase(home.resolve("data/home.db"));
+    }
+
+    @Bean(destroyMethod = "close")
+    Database conversationDatabase() {
+        Path home = Path.of(System.getProperty("personalassistant.home", ".")).toAbsolutePath();
+        return new Database(home.resolve("data/conversations.db"));
+    }
+
+    @Bean(destroyMethod = "close")
+    LocalModelProvider localModelProvider() {
+        Path home = Path.of(System.getProperty("personalassistant.home", ".")).toAbsolutePath();
+        return new LocalModelProvider(home);
+    }
+
+    @Bean
+    LocalVisionProvider localVisionProvider() {
+        Path home = Path.of(System.getProperty("personalassistant.home", ".")).toAbsolutePath();
+        return new LocalVisionProvider(home);
     }
 
     @EventListener(ApplicationReadyEvent.class)

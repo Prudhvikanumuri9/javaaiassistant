@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#173b32">
   <title>Hearth · Home Organizer</title>
   <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/assistant.css">
 </head>
 <body>
   <header class="topbar">
@@ -15,6 +16,7 @@
   <div class="shell">
     <nav class="nav" aria-label="Main navigation">
       <button class="nav-button active" data-view="dashboard">Overview</button>
+      <button class="nav-button" data-view="assistant">AI assistant</button>
       <button class="nav-button" data-view="inventory">Inventory</button>
       <button class="nav-button" data-view="meals">Weekly meals</button>
       <button class="nav-button" data-view="shopping">Shopping list</button>
@@ -34,6 +36,25 @@
         <div class="split">
           <article class="panel"><div class="panel-title"><div><p class="eyebrow">ATTENTION</p><h3>Running low</h3></div><button class="text-button" data-go="inventory">View all</button></div><div id="low-preview" class="empty">Nothing is running low.</div></article>
           <article class="panel"><div class="panel-title"><div><p class="eyebrow">THIS WEEK</p><h3>Meal plan</h3></div><button class="text-button" data-go="meals">Plan meals</button></div><div id="meal-preview" class="empty">No meals planned yet.</div></article>
+        </div>
+      </section>
+      <section class="view" id="assistant">
+        <div class="page-title">
+          <div><p class="eyebrow">LOCAL HOUSEHOLD AI</p><h2>Ask Hearth</h2><p id="assistant-provider">Checking local model…</p></div>
+          <div class="model-pickers">
+            <label class="model-picker">Reasoning model<select id="reasoning-model"></select></label>
+            <label class="model-picker">Vision model<select id="vision-model"></select></label>
+          </div>
+        </div>
+        <div class="assistant-shell">
+          <div id="assistant-messages" class="assistant-messages">
+            <div class="assistant-empty"><h3>Your home, in context.</h3><p>Ask what you can cook, what is running low, what expires soon, or how to plan the week.</p></div>
+          </div>
+          <form id="assistant-form" class="assistant-compose">
+            <textarea name="message" rows="2" required placeholder="What can I cook with what I have?"></textarea>
+            <div class="compose-actions"><button type="submit" class="primary" id="assistant-send">Ask assistant</button></div>
+          </form>
+          <p class="assistant-disclaimer">Runs locally. It can read household context; changes still require confirmation in the relevant screen.</p>
         </div>
       </section>
       <section class="view" id="inventory">
