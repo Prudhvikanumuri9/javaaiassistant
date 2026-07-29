@@ -42,6 +42,10 @@ The setup command prints a generated six-digit household PIN. Sign in with
 username `home` and that PIN. Use LAN mode only on a trusted private home
 network and never forward port 8787 through the router.
 
+Run setup only once. Normal starts require only `run-https.cmd`. Re-running
+setup with the same IP preserves the existing certificate and PIN. Use
+`setup-https.cmd YOUR_PC_IP --force` only when intentionally replacing them.
+
 A Java 21, local-first desktop assistant MVP. It includes a JavaFX chat UI,
 SQLite conversation and memory storage, installable skills, configurable
 permissions, and a provider boundary for a future bundled native LLM engine.

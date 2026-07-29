@@ -256,7 +256,7 @@ setup-https.cmd 192.168.1.25
 
 Replace the example address with the PC's actual address. If the router later
 assigns the PC a different address, reserve the address in the router or run
-the setup script again using the new address.
+the setup script with the new address and `--force`.
 
 The script creates:
 
@@ -321,9 +321,10 @@ or run this once from an Administrator Command Prompt:
 netsh advfirewall firewall add rule name="Personal Assistant HTTPS" dir=in action=allow protocol=TCP localport=8787 profile=private
 ```
 
-The current PIN is stored locally in `config\https.properties`. To reset it,
-run `setup-https.cmd` again with the current LAN IP, reinstall the newly
-generated CA certificate on the phone, and restart the application.
+The current PIN is stored locally in `config\https.properties`. Setup is
+one-time: re-running it with the same IP preserves the certificate and PIN.
+To intentionally reset them, run `setup-https.cmd YOUR_PC_IP --force`, install
+the newly generated CA certificate on the phone, and restart the application.
 
 Do not use HTTPS LAN mode on public, office, hotel, or guest Wi-Fi, and do not
 forward port 8787 through the router.

@@ -1,7 +1,8 @@
 param(
     [Parameter(Mandatory = $true)]
     [ValidatePattern('^\d{1,3}(\.\d{1,3}){3}$')]
-    [string]$LanIp
+    [string]$LanIp,
+    [switch]$Force
 )
 
 $ErrorActionPreference = 'Stop'
@@ -27,6 +28,29 @@ $caCertificate = Join-Path $configDir 'personal-assistant-ca.cer'
 $request = Join-Path $configDir 'https-request.csr'
 $signedCertificate = Join-Path $configDir 'https-signed.cer'
 $settings = Join-Path $configDir 'https.properties'
+
+if ((Test-Path -LiteralPath $settings) -and
+    (Test-Path -LiteralPath $serverStore) -and
+    (Test-Path -LiteralPath $caCertificate) -and
+    -not $Force) {
+    $existing = @{}
+    foreach ($line in Get-Content -LiteralPath $settings) {
+        if ($line -match '^([^=]+)=(.*)$') { $existing[$matches[1]] = $matches[2] }
+    }
+    if ($existing['PA_LAN_IP'] -ne $LanIp) {
+        throw "HTTPS is configured for $($existing['PA_LAN_IP']). To replace it, run: setup-https.cmd $LanIp --force"
+    }
+    Write-Host 'Existing HTTPS certificate preserved.' -ForegroundColor Green
+    Write-Host "Phone address: https://${LanIp}:8787"
+    Write-Host 'Username: home'
+    if ($existing['PA_ACCESS_PIN']) {
+        Write-Host "Household access PIN: $($existing['PA_ACCESS_PIN'])" -ForegroundColor Yellow
+    } else {
+        Write-Host "The existing setup has no PIN. Run setup-https.cmd $LanIp --force once to add one." -ForegroundColor Yellow
+    }
+    Write-Host "CA certificate: $caCertificate"
+    exit 0
+}
 
 foreach ($file in @($caStore, $serverStore, $caCertificate, $request, $signedCertificate, $settings)) {
     if (Test-Path -LiteralPath $file) {
