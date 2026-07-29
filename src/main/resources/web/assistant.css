@@ -1,5 +1,8 @@
 .model-picker { min-width: 260px; }
 .model-pickers { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.assistant-controls { display: grid; gap: 10px; }
+.chat-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.chat-actions select { min-width: 220px; }
 .assistant-shell { max-width: 900px; margin: auto; background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow); }
 .assistant-messages { height: min(56vh, 590px); overflow: auto; padding: 25px; display: flex; flex-direction: column; gap: 14px; }
 .assistant-empty { text-align: center; margin: auto; color: var(--muted); max-width: 470px; }

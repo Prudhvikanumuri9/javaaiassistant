@@ -20,6 +20,12 @@ snapshot of inventory, this week's meals, and calculated shopping shortages
 before answering. It is intentionally read-only: it may suggest changes, but
 inventory and plans are changed only through their dedicated screens.
 
+Use **New chat** to begin a separate persisted conversation, choose an earlier
+conversation from **Recent chats**, or use **Clear chat** to permanently delete
+only the active conversation. The built-in `HOME_INVENTORY_READ` skill refreshes
+from SQLite for every question, so inventory answers use current quantities,
+locations, expiration dates, meal plans, and shopping shortages.
+
 Every `.gguf` file in `models/language/` appears in the **Reasoning model**
 selector. Changing the selection stops the current local reasoning server and
 loads the chosen model with the next question. The choice is saved in

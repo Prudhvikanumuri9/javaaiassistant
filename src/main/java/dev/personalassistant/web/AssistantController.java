@@ -28,7 +28,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/assistant")
 public class AssistantController {
-    private static final String CONVERSATION = "web-home";
+    private static final String DEFAULT_CONVERSATION = "web-home";
     private final Database conversations;
     private final HomeDatabase home;
     private final LocalModelProvider provider;
@@ -113,11 +113,28 @@ public class AssistantController {
     }
 
     @GetMapping("/messages")
-    List<MessageView> messages() {
-        return conversations.messages(CONVERSATION).stream()
+    List<MessageView> messages(@RequestParam(defaultValue = DEFAULT_CONVERSATION) String conversationId) {
+        String id = validConversationId(conversationId);
+        return conversations.messages(id).stream()
                 .filter(message -> message.role() != ChatMessage.Role.SYSTEM)
                 .map(message -> new MessageView(message.role().name().toLowerCase(), message.content()))
                 .toList();
+    }
+
+    @GetMapping("/conversations")
+    List<Database.ConversationSummary> conversations() {
+        return conversations.conversations();
+    }
+
+    @PostMapping("/conversations")
+    Map<String, String> newConversation() {
+        return Map.of("id", "web-" + UUID.randomUUID());
+    }
+
+    @DeleteMapping("/conversations/{conversationId}")
+    Map<String, Boolean> clearConversation(@PathVariable String conversationId) {
+        conversations.clearConversation(validConversationId(conversationId));
+        return Map.of("ok", true);
     }
 
     @PostMapping("/chat")
@@ -127,15 +144,16 @@ public class AssistantController {
         if (!provider.available()) {
             throw new IllegalStateException("The bundled local model or llama.cpp runtime is unavailable.");
         }
-        conversations.addMessage(CONVERSATION, ChatMessage.Role.USER, text);
+        String conversationId = validConversationId(request.conversationId());
+        conversations.addMessage(conversationId, ChatMessage.Role.USER, text);
         List<ChatMessage> history = new ArrayList<>();
-        history.add(new ChatMessage(0, CONVERSATION, ChatMessage.Role.SYSTEM,
+        history.add(new ChatMessage(0, conversationId, ChatMessage.Role.SYSTEM,
                 householdContext(), java.time.Instant.now()));
-        List<ChatMessage> stored = conversations.messages(CONVERSATION);
+        List<ChatMessage> stored = conversations.messages(conversationId);
         history.addAll(stored.subList(Math.max(0, stored.size() - 16), stored.size()));
         List<Skill> skills = SkillLoader.load(appHome.resolve("skills"));
         String reply = provider.reply(history, skills).get(4, TimeUnit.MINUTES);
-        conversations.addMessage(CONVERSATION, ChatMessage.Role.ASSISTANT, reply);
+        conversations.addMessage(conversationId, ChatMessage.Role.ASSISTANT, reply);
         return new MessageView("assistant", reply);
     }
 
@@ -143,8 +161,11 @@ public class AssistantController {
         LocalDate monday = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         String sunday = monday.plusDays(6).toString();
         StringBuilder context = new StringBuilder("""
-                Household context supplied by the local application follows.
-                Use it to answer questions about available items, cooking, meals, and shopping.
+                Built-in skill: HOME_INVENTORY_READ.
+                The following is a live, authoritative snapshot from the local SQLite household database.
+                For questions about what the user owns, quantities, locations, expiration, cooking,
+                planned meals, or shopping shortages, answer from this snapshot rather than guessing.
+                If an item is absent, say it is not currently recorded; do not claim the user lacks it.
                 Never claim an item was added, removed, purchased, or changed. This chat is read-only.
                 Suggest an action and ask the user to perform or confirm it in the relevant screen.
 
@@ -167,7 +188,13 @@ public class AssistantController {
         return context.toString();
     }
 
-    public record ChatRequest(String message) {}
+    private static String validConversationId(String value) {
+        String id = value == null || value.isBlank() ? DEFAULT_CONVERSATION : value.trim();
+        if (!id.matches("[A-Za-z0-9-]{1,80}")) throw new IllegalArgumentException("Invalid conversation id");
+        return id;
+    }
+
+    public record ChatRequest(String message, String conversationId) {}
     public record ModelRequest(String filename) {}
     public record SpeechRequest(String text) {}
     public record MessageView(String role, String content) {}

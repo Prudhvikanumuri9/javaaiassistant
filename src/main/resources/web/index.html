@@ -41,9 +41,16 @@
       <section class="view" id="assistant">
         <div class="page-title">
           <div><p class="eyebrow">LOCAL HOUSEHOLD AI</p><h2>Ask Hearth</h2><p id="assistant-provider">Checking local model…</p></div>
-          <div class="model-pickers">
+          <div class="assistant-controls">
+            <div class="chat-actions">
+              <select id="conversation-picker" aria-label="Recent conversations"></select>
+              <button type="button" class="secondary" id="new-chat">New chat</button>
+              <button type="button" class="secondary" id="clear-chat">Clear chat</button>
+            </div>
+            <div class="model-pickers">
             <label class="model-picker">Reasoning model<select id="reasoning-model"></select></label>
             <label class="model-picker">Vision model<select id="vision-model"></select></label>
+            </div>
           </div>
         </div>
         <div class="assistant-shell">

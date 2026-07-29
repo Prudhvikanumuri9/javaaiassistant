@@ -11,6 +11,7 @@ import java.util.List;
 
 public final class Database implements AutoCloseable {
     private final Connection connection;
+    public record ConversationSummary(String id, String title, String updatedAt) {}
 
     public Database(Path file) {
         try {
@@ -80,6 +81,36 @@ public final class Database implements AutoCloseable {
         }
     }
 
+    public synchronized List<ConversationSummary> conversations() {
+        String sql = """
+                SELECT conversation_id,
+                       COALESCE(MAX(CASE WHEN role='USER' THEN substr(content,1,60) END), 'New chat') title,
+                       MAX(created_at) updated_at
+                FROM messages
+                GROUP BY conversation_id
+                ORDER BY updated_at DESC
+                LIMIT 30""";
+        List<ConversationSummary> result = new ArrayList<>();
+        try (Statement statement = connection.createStatement();
+             ResultSet rows = statement.executeQuery(sql)) {
+            while (rows.next()) result.add(new ConversationSummary(
+                    rows.getString("conversation_id"), rows.getString("title"), rows.getString("updated_at")));
+            return result;
+        } catch (SQLException e) {
+            throw new IllegalStateException("Cannot list conversations", e);
+        }
+    }
+
+    public synchronized void clearConversation(String conversationId) {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "DELETE FROM messages WHERE conversation_id=?")) {
+            statement.setString(1, conversationId);
+            statement.executeUpdate();
+        } catch (SQLException e) {
+            throw new IllegalStateException("Cannot clear conversation", e);
+        }
+    }
+
     public void remember(String key, String value) {
         String sql = """
                 INSERT INTO memory(key, value, updated_at) VALUES(?,?,?)
@@ -114,4 +145,3 @@ public final class Database implements AutoCloseable {
         }
     }
 }
-

@@ -20,6 +20,10 @@ class DatabaseTest {
             database.remember("name", "Ada");
             assertEquals("hello", database.messages("chat").getFirst().content());
             assertEquals("Ada", database.recall("name"));
+            assertEquals("chat", database.conversations().getFirst().id());
+            assertEquals("hello", database.conversations().getFirst().title());
+            database.clearConversation("chat");
+            assertEquals(0, database.messages("chat").size());
         }
     }
 }
