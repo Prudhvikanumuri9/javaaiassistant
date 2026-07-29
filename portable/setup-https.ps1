@@ -18,6 +18,9 @@ if (-not (Test-Path -LiteralPath $keytool)) {
 
 New-Item -ItemType Directory -Path $configDir -Force | Out-Null
 $password = [Guid]::NewGuid().ToString('N')
+$pinBytes = New-Object byte[] 4
+[System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($pinBytes)
+$accessPin = (([BitConverter]::ToUInt32($pinBytes, 0) % 900000) + 100000).ToString()
 $caStore = Join-Path $configDir 'local-ca.p12'
 $serverStore = Join-Path $configDir 'https.p12'
 $caCertificate = Join-Path $configDir 'personal-assistant-ca.cer'
@@ -67,11 +70,14 @@ Invoke-Keytool -importcert -alias personal-assistant -keystore $serverStore `
 @"
 PA_LAN_IP=$LanIp
 PA_KEYSTORE_PASSWORD=$password
+PA_ACCESS_PIN=$accessPin
 "@ | Set-Content -LiteralPath $settings -Encoding ASCII
 
 Remove-Item -LiteralPath $request, $signedCertificate -Force
 Write-Host ''
 Write-Host 'HTTPS certificates created successfully.' -ForegroundColor Green
 Write-Host "Phone address: https://${LanIp}:8787"
+Write-Host "Username: home"
+Write-Host "Household access PIN: $accessPin" -ForegroundColor Yellow
 Write-Host "Install this CA certificate on the phone: $caCertificate"
 Write-Host 'Keep local-ca.p12 and https.properties private.'

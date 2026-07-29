@@ -268,6 +268,8 @@ config\personal-assistant-ca.cer
 ```
 
 Keep the `.p12` and `.properties` files private. Never commit or share them.
+The setup command also prints a generated household access PIN. The username
+is `home`.
 
 ### 11.2 Trust the certificate on Android
 
@@ -307,7 +309,10 @@ while connected to the same private Wi-Fi, open:
 https://192.168.1.25:8787
 ```
 
-Allow camera permission when prompted.
+When the browser requests credentials, use username `home` and the six-digit
+PIN printed by `setup-https.cmd` or `run-https.cmd`. The browser normally
+remembers the login until it is completely closed. Allow camera permission
+when prompted.
 
 If Windows Firewall blocks the connection, allow Java on **Private networks**
 or run this once from an Administrator Command Prompt:
@@ -316,9 +321,12 @@ or run this once from an Administrator Command Prompt:
 netsh advfirewall firewall add rule name="Personal Assistant HTTPS" dir=in action=allow protocol=TCP localport=8787 profile=private
 ```
 
-The application currently has no LAN login. Do not use HTTPS LAN mode on
-public, office, hotel, or guest Wi-Fi, and do not forward port 8787 through
-the router. Authentication is the next recommended security feature.
+The current PIN is stored locally in `config\https.properties`. To reset it,
+run `setup-https.cmd` again with the current LAN IP, reinstall the newly
+generated CA certificate on the phone, and restart the application.
+
+Do not use HTTPS LAN mode on public, office, hotel, or guest Wi-Fi, and do not
+forward port 8787 through the router.
 
 Exact model/runtime download locations and license information are documented
 in:

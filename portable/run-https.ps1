@@ -20,7 +20,14 @@ $env:PA_HTTPS = 'true'
 $env:PA_SERVER_ADDRESS = '0.0.0.0'
 $env:PA_KEYSTORE = $keyStore
 $env:PA_KEYSTORE_PASSWORD = $settings['PA_KEYSTORE_PASSWORD']
+$env:PA_ACCESS_PIN = $settings['PA_ACCESS_PIN']
+
+if ([string]::IsNullOrWhiteSpace($env:PA_ACCESS_PIN)) {
+    throw 'Access PIN is missing. Run setup-https.cmd again to enable secure LAN login.'
+}
 
 Write-Host "Starting Personal Assistant at https://$($settings['PA_LAN_IP']):8787"
+Write-Host 'Login username: home'
+Write-Host "Access PIN: $env:PA_ACCESS_PIN"
 Set-Location -LiteralPath $appRoot
 & java -jar $jar --no-browser

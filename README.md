@@ -38,8 +38,9 @@ Replace `192.168.1.25` with the computer's actual address. Install
 then browse to `https://192.168.1.25:8787`. Full phone instructions are in
 [INSTALL.md](INSTALL.md).
 
-HTTPS LAN mode currently has no user login. Use it only on a trusted private
-home network and never forward port 8787 through the router.
+The setup command prints a generated six-digit household PIN. Sign in with
+username `home` and that PIN. Use LAN mode only on a trusted private home
+network and never forward port 8787 through the router.
 
 A Java 21, local-first desktop assistant MVP. It includes a JavaFX chat UI,
 SQLite conversation and memory storage, installable skills, configurable
