@@ -491,8 +491,8 @@ enabled for the site in the phone's browser settings.
 **Web assistant voice input is unavailable:** confirm the bundled Whisper
 runtime and model are present, the page uses trusted HTTPS, and microphone
 permission is enabled for the site. Select **Start talking**, speak, and then
-select **Stop**. The transcript is placed in the chat box for review before it
-is submitted.
+select **Stop**. A successful transcript is submitted to the assistant
+automatically. Empty or failed transcriptions are not submitted.
 
 **Spoken replies are unavailable:** confirm the bundled Piper runtime, `.onnx`
 voice, and matching `.onnx.json` file are present. Enable **Speak replies** on

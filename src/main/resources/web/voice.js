@@ -65,8 +65,8 @@
       if (!response.ok) throw new Error((await response.json()).error || "Transcription failed");
       const result = await response.json();
       field.value = result.text;
-      field.focus();
-      setStatus("Transcription ready. Review it, then ask the assistant.");
+      setStatus("Transcription ready. Sending to the assistant…");
+      document.querySelector("#assistant-form").requestSubmit();
     } catch (error) {
       setStatus(`Transcription failed: ${error.message}`);
     }

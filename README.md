@@ -36,7 +36,7 @@ On the **AI assistant** page:
 1. Select **Start talking** and allow microphone permission.
 2. Speak, then select **Stop**.
 3. Whisper transcribes the browser-generated 16 kHz mono WAV locally.
-4. Review the text and select **Ask assistant**.
+4. A successful non-empty transcript is sent to the assistant automatically.
 5. Enable **Speak replies** to synthesize answers locally with Piper.
 
 Audio travels only between the browser and this PC over the configured HTTPS
