@@ -239,26 +239,67 @@ mvn clean package
 
 ## 10. Component sources and licenses
 
-## 11. Secure mobile access over the local network
+## 11. Windows CMD: secure mobile access over the local network
 
-The camera API requires a trusted HTTPS connection on mobile browsers. The
-portable package can create a private certificate authority used only by your
-home installation.
+Mobile browsers require trusted HTTPS before they allow camera capture. This
+section configures private HTTPS access between a Windows PC and phones on the
+same home Wi-Fi. Certificate setup is a **one-time operation**. Daily startup
+does not regenerate the certificate.
 
-### 11.1 Create the certificates
+### 11.1 Prerequisites
 
-On the PC, run `ipconfig` and find the IPv4 address of the active Wi-Fi adapter.
-Then open Command Prompt in the packaged `PersonalAssistant` directory:
+- The PC and phone are connected to the same private home Wi-Fi.
+- Java 21 is installed and `java -version` works.
+- The complete packaged `PersonalAssistant` directory is present.
+- Guest Wi-Fi, client isolation, VPN, and router port forwarding are not used.
+
+Open Windows **Command Prompt**. The commands below assume this package path:
 
 ```cmd
-setup-https.cmd 192.168.1.25
+cd /d D:\workspace\AIAPPS\target\PersonalAssistant
 ```
 
-Replace the example address with the PC's actual address. If the router later
-assigns the PC a different address, reserve the address in the router or run
-the setup script with the new address and `--force`.
+If the package is elsewhere, replace the path.
 
-The script creates:
+### 11.2 Find the Windows LAN IP
+
+Run:
+
+```cmd
+ipconfig
+```
+
+Under the active Wi-Fi or Ethernet adapter, find `IPv4 Address`. An example is
+`10.0.0.12`. Do not use the default gateway, `127.0.0.1`, a disconnected
+adapter, or a VPN address.
+
+Optional connectivity check:
+
+```cmd
+ping 10.0.0.12
+```
+
+Replace the example IP in every command and URL below with the PC's actual IP.
+
+### 11.3 One-time HTTPS certificate and PIN setup
+
+Run this command once:
+
+```cmd
+setup-https.cmd 10.0.0.12
+```
+
+It creates a private local certificate authority, an HTTPS server certificate
+valid for the supplied IP, and a random six-digit household PIN. The output
+shows:
+
+```text
+Phone address: https://10.0.0.12:8787
+Username: home
+Household access PIN: 123456
+```
+
+The following private files are stored locally:
 
 ```text
 config\https.p12
@@ -267,67 +308,188 @@ config\https.properties
 config\personal-assistant-ca.cer
 ```
 
-Keep the `.p12` and `.properties` files private. Never commit or share them.
-The setup command also prints a generated household access PIN. The username
-is `home`.
+Do not commit, email, or publicly share the `.p12` or `.properties` files.
+`personal-assistant-ca.cer` is the public CA certificate installed only on
+devices that you authorize.
 
-### 11.2 Trust the certificate on Android
+### 11.4 Certificate-preservation rules
 
-Copy `config\personal-assistant-ca.cer` to the phone. The exact menu varies by
-manufacturer, but it is normally under:
+For normal use, do **not** run setup again. Use `run-https.cmd`.
+
+If setup is accidentally called again with the same IP, it preserves the
+existing certificate and PIN:
+
+```cmd
+setup-https.cmd 10.0.0.12
+```
+
+It prints `Existing HTTPS certificate preserved` and does not replace files.
+Certificate and PIN replacement occurs only when `--force` is specified:
+
+```cmd
+setup-https.cmd 10.0.0.12 --force
+```
+
+After `--force`, every phone must remove the old CA and install the newly
+generated `personal-assistant-ca.cer`.
+
+### 11.5 Trust the CA certificate on Windows
+
+This step removes the certificate warning when the PC itself opens the HTTPS
+address. Run in a regular Command Prompt for the current Windows user:
+
+```cmd
+certutil -user -addstore Root "D:\workspace\AIAPPS\target\PersonalAssistant\config\personal-assistant-ca.cer"
+```
+
+Completely close and reopen Chrome or Edge afterward.
+
+### 11.6 Trust the CA certificate on Android
+
+Copy this file to the phone:
+
+```text
+config\personal-assistant-ca.cer
+```
+
+Install it specifically as a **CA certificate**, normally under:
 
 ```text
 Settings > Security > Encryption & credentials > Install a certificate > CA certificate
 ```
 
-Select the copied certificate and acknowledge that it is a private local CA.
-Use this only on a phone you control.
+Confirm that `Personal Assistant Local CA` appears under:
 
-### 11.3 Trust the certificate on iPhone or iPad
+```text
+Settings > Security > Encryption & credentials > Trusted credentials > User
+```
 
-Send `personal-assistant-ca.cer` to the device and open it to install the
-profile. Then open:
+Menu names vary by phone manufacturer. Completely close and reopen the mobile
+browser after installation.
+
+### 11.7 Trust the CA certificate on iPhone or iPad
+
+Transfer `personal-assistant-ca.cer` to the device and open it to install the
+configuration profile. Installation alone is not enough. Then open:
 
 ```text
 Settings > General > About > Certificate Trust Settings
 ```
 
-Enable full trust for `Personal Assistant Local CA`.
+Enable full trust for `Personal Assistant Local CA`, then restart the browser.
 
-### 11.4 Start and connect
+### 11.8 One-time Windows Firewall rule
 
-Start secure LAN mode:
-
-```cmd
-run-https.cmd
-```
-
-Or double-click `run-https.cmd`. Keep its terminal window open. On the phone,
-while connected to the same private Wi-Fi, open:
-
-```text
-https://192.168.1.25:8787
-```
-
-When the browser requests credentials, use username `home` and the six-digit
-PIN printed by `setup-https.cmd` or `run-https.cmd`. The browser normally
-remembers the login until it is completely closed. Allow camera permission
-when prompted.
-
-If Windows Firewall blocks the connection, allow Java on **Private networks**
-or run this once from an Administrator Command Prompt:
+First accept the Windows Firewall prompt for Java on **Private networks**. If
+the phone still cannot connect, open **Command Prompt as Administrator** and
+run:
 
 ```cmd
 netsh advfirewall firewall add rule name="Personal Assistant HTTPS" dir=in action=allow protocol=TCP localport=8787 profile=private
 ```
 
-The current PIN is stored locally in `config\https.properties`. Setup is
-one-time: re-running it with the same IP preserves the certificate and PIN.
-To intentionally reset them, run `setup-https.cmd YOUR_PC_IP --force`, install
-the newly generated CA certificate on the phone, and restart the application.
+Verify that the rule exists:
 
-Do not use HTTPS LAN mode on public, office, hotel, or guest Wi-Fi, and do not
-forward port 8787 through the router.
+```cmd
+netsh advfirewall firewall show rule name="Personal Assistant HTTPS"
+```
+
+### 11.9 Daily startup
+
+For every normal start, use only:
+
+```cmd
+cd /d D:\workspace\AIAPPS\target\PersonalAssistant
+run-https.cmd
+```
+
+Do not run `setup-https.cmd` during daily startup. Keep the command window open;
+closing it stops the server. The launcher displays the current URL, username,
+and PIN.
+
+On the phone, open:
+
+```text
+https://10.0.0.12:8787
+```
+
+Sign in with:
+
+```text
+Username: home
+Password: the six-digit household PIN
+```
+
+Allow camera permission when prompted.
+
+### 11.10 Verify the server on Windows
+
+While `run-https.cmd` remains open, use another Command Prompt:
+
+```cmd
+netstat -ano | findstr :8787
+```
+
+The listening address should be `0.0.0.0:8787`. If it shows only
+`127.0.0.1:8787`, the normal local-only launcher was used instead of
+`run-https.cmd`.
+
+### 11.11 Find or reset the PIN
+
+The PIN is stored only on the PC in:
+
+```text
+config\https.properties
+```
+
+Display it from Command Prompt:
+
+```cmd
+findstr PA_ACCESS_PIN config\https.properties
+```
+
+To intentionally create a new PIN and certificate:
+
+```cmd
+setup-https.cmd 10.0.0.12 --force
+```
+
+Reinstall the new CA certificate on every phone afterward.
+
+### 11.12 When the PC's IP address changes
+
+The certificate is valid only for the IP used during setup. The best option is
+to reserve the PC's address in the home router. If the address changes, stop
+the app, replace the certificate, and start it again:
+
+```cmd
+setup-https.cmd NEW_PC_IP --force
+run-https.cmd
+```
+
+Remove the old CA certificate from each phone and install the new one.
+
+### 11.13 Troubleshooting
+
+**The site opens but HTTPS is crossed out:** the phone has not trusted the
+current CA, the CA was installed in the wrong certificate category, the phone
+still has an older CA, or its date/time is wrong. Install the latest
+`personal-assistant-ca.cer` as a CA certificate and restart the browser.
+
+**The phone cannot connect:** confirm the app is running, both devices are on
+the same non-guest Wi-Fi, the URL contains the correct PC IP, port 8787 is
+listening on `0.0.0.0`, and the private firewall rule exists.
+
+**The browser repeatedly asks for credentials:** use username `home`, confirm
+the PIN with `findstr PA_ACCESS_PIN config\https.properties`, and completely
+close browser tabs that cached an old PIN.
+
+**The camera is unavailable:** confirm the URL begins with `https://`, the
+certificate shows as trusted without a warning, and camera permission is
+enabled for the site in the phone's browser settings.
+
+Do not use LAN mode on office, public, hotel, or guest Wi-Fi. Never forward
+port 8787 through the router or expose it to the internet.
 
 Exact model/runtime download locations and license information are documented
 in:
