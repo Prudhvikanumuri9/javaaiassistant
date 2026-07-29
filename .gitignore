@@ -6,3 +6,5 @@ PersonalAssistant/data/*.db
 PersonalAssistant/logs/*.log
 portable/data/*.db
 portable/logs/*.log
+/config/
+/data/

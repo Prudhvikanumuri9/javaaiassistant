@@ -5,7 +5,9 @@ import dev.personalassistant.data.Database;
 import dev.personalassistant.provider.LocalModelProvider;
 import dev.personalassistant.skill.SkillLoader;
 import dev.personalassistant.ui.AssistantApp;
+import dev.personalassistant.web.HomeWebApplication;
 import javafx.application.Application;
+import org.springframework.boot.SpringApplication;
 
 import java.nio.file.Path;
 
@@ -21,7 +23,12 @@ public final class Main {
         }
         SkillLoader.load(home.resolve("skills"));
         LocalModelProvider.detectPlatform();
-        Application.launch(AssistantApp.class, args);
+        if (java.util.Arrays.asList(args).contains("--desktop")) {
+            Application.launch(AssistantApp.class, args);
+            return;
+        }
+        System.setProperty("personalassistant.open-browser",
+                Boolean.toString(!java.util.Arrays.asList(args).contains("--no-browser")));
+        SpringApplication.run(HomeWebApplication.class, args);
     }
 }
-

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173b32">
+  <title>Hearth · Home Organizer</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div><p class="eyebrow">PERSONAL ASSISTANT</p><h1>Hearth</h1></div>
+    <div class="privacy"><span></span> Local only</div>
+  </header>
+  <div class="shell">
+    <nav class="nav" aria-label="Main navigation">
+      <button class="nav-button active" data-view="dashboard">Overview</button>
+      <button class="nav-button" data-view="inventory">Inventory</button>
+      <button class="nav-button" data-view="meals">Weekly meals</button>
+      <button class="nav-button" data-view="shopping">Shopping list</button>
+    </nav>
+    <main>
+      <section class="view active" id="dashboard">
+        <div class="hero">
+          <div><p class="eyebrow">HOME COMMAND CENTER</p><h2>Use what you have.<br>Buy only what you need.</h2><p>Catalog household items, plan meals, and turn the week into one clear shopping list.</p></div>
+          <button class="primary" data-open-item>+ Add an item</button>
+        </div>
+        <div class="stats">
+          <article><span>Items tracked</span><strong id="stat-items">0</strong></article>
+          <article><span>Running low</span><strong id="stat-low">0</strong></article>
+          <article><span>Meals this week</span><strong id="stat-meals">0</strong></article>
+          <article><span>Things to buy</span><strong id="stat-shopping">0</strong></article>
+        </div>
+        <div class="split">
+          <article class="panel"><div class="panel-title"><div><p class="eyebrow">ATTENTION</p><h3>Running low</h3></div><button class="text-button" data-go="inventory">View all</button></div><div id="low-preview" class="empty">Nothing is running low.</div></article>
+          <article class="panel"><div class="panel-title"><div><p class="eyebrow">THIS WEEK</p><h3>Meal plan</h3></div><button class="text-button" data-go="meals">Plan meals</button></div><div id="meal-preview" class="empty">No meals planned yet.</div></article>
+        </div>
+      </section>
+      <section class="view" id="inventory">
+        <div class="page-title"><div><p class="eyebrow">WHAT YOU HAVE</p><h2>Home inventory</h2></div><button class="primary" data-open-item>+ Add item</button></div>
+        <div class="toolbar"><input id="inventory-search" type="search" placeholder="Search name, category, or location"><select id="inventory-category"><option value="">All categories</option></select></div>
+        <div id="inventory-grid" class="item-grid"></div>
+      </section>
+      <section class="view" id="meals">
+        <div class="page-title"><div><p class="eyebrow">COOK WITH INTENTION</p><h2>Weekly meal plan</h2></div><div class="week-switcher"><button id="week-prev" aria-label="Previous week">←</button><strong id="week-label"></strong><button id="week-next" aria-label="Next week">→</button></div></div>
+        <div class="split meal-layout">
+          <article class="panel">
+            <h3>Add a meal</h3>
+            <form id="meal-form">
+              <label>Date<input name="mealDate" type="date" required></label>
+              <label>Meal<select name="mealType"><option>Breakfast</option><option>Lunch</option><option selected>Dinner</option><option>Snack</option></select></label>
+              <label class="wide">Recipe or meal<input name="recipeName" required placeholder="Vegetable pasta"></label>
+              <label>Servings<input name="servings" type="number" min="1" value="2"></label>
+              <label class="wide">Ingredients <small>one per line: name | quantity | unit</small><textarea name="ingredients" rows="6" placeholder="pasta | 1 | box&#10;tomato sauce | 2 | jar"></textarea></label>
+              <label class="wide">Notes<textarea name="notes" rows="2"></textarea></label>
+              <button class="primary wide" type="submit">Add to week</button>
+            </form>
+          </article>
+          <div id="meal-days" class="meal-days"></div>
+        </div>
+      </section>
+      <section class="view" id="shopping">
+        <div class="page-title"><div><p class="eyebrow">ONLY WHAT'S MISSING</p><h2>Shopping list</h2><p id="shopping-week"></p></div><button class="secondary" id="copy-shopping">Copy list</button></div>
+        <div class="shopping-note">Calculated from your weekly meals minus matching inventory quantities.</div>
+        <div id="shopping-list" class="shopping-list"></div>
+      </section>
+    </main>
+  </div>
+  <dialog id="item-dialog">
+    <form id="item-form">
+      <div class="dialog-title"><div><p class="eyebrow">CATALOG YOUR HOME</p><h2 id="item-dialog-title">Add an item</h2></div><button type="button" class="icon-button" data-close>×</button></div>
+      <input name="id" type="hidden">
+      <div class="camera-box">
+        <video id="camera-video" playsinline autoplay hidden></video><img id="photo-preview" alt="Captured item" hidden>
+        <div id="camera-placeholder"><strong>Take a quick photo</strong><span>Use your selected webcam to catalog this item.</span></div>
+        <canvas id="camera-canvas" hidden></canvas>
+        <div class="camera-actions"><button type="button" class="secondary" id="start-camera">Start camera</button><button type="button" class="primary" id="capture-photo" hidden>Capture</button></div>
+      </div>
+      <div class="form-grid">
+        <label class="wide">Item name<input name="name" required placeholder="Basmati rice"></label>
+        <label>Category<input name="category" placeholder="Pantry"></label><label>Location<input name="location" placeholder="Kitchen cabinet"></label>
+        <label>Quantity<input name="quantity" type="number" min="0" step="0.01" value="1"></label><label>Unit<input name="unit" placeholder="bag, lb, count"></label>
+        <label>Minimum quantity<input name="minQuantity" type="number" min="0" step="0.01" value="0"></label><label>Expires on<input name="expiresOn" type="date"></label>
+        <label class="wide">Notes<textarea name="notes" rows="3"></textarea></label>
+      </div>
+      <div class="dialog-actions"><button type="button" class="secondary" data-close>Cancel</button><button type="submit" class="primary">Save item</button></div>
+    </form>
+  </dialog>
+  <div id="toast" role="status"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
