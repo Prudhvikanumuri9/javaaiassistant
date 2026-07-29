@@ -3,6 +3,12 @@
 .assistant-controls { display: grid; gap: 10px; }
 .chat-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .chat-actions select { min-width: 220px; }
+.skill-controls { display: flex; align-items: center; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+.builtin-skill { padding: 7px 10px; border-radius: 99px; color: var(--green); background: var(--lime); font-size: 12px; font-weight: 750; }
+.auto-skills { flex-direction: row; align-items: center; }
+.auto-skills input { width: auto; }
+.skill-picker { min-width: 260px; }
+.skill-picker select { min-height: 66px; }
 .assistant-shell { max-width: 900px; margin: auto; background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow); }
 .assistant-messages { height: min(56vh, 590px); overflow: auto; padding: 25px; display: flex; flex-direction: column; gap: 14px; }
 .assistant-empty { text-align: center; margin: auto; color: var(--muted); max-width: 470px; }

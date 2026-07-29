@@ -26,6 +26,21 @@ only the active conversation. The built-in `HOME_INVENTORY_READ` skill refreshes
 from SQLite for every question, so inventory answers use current quantities,
 locations, expiration dates, meal plans, and shopping shortages.
 
+### Selecting multiple skills
+
+The assistant header lists enabled skills installed under `skills/`.
+
+- **Home inventory** is built in and always available.
+- **Auto skills** matches the question against installed skill metadata and
+  includes only relevant prompts.
+- Turn off **Auto skills** to select multiple skills manually.
+- Manual and Auto preferences are remembered by the browser.
+
+Selective activation is preferable to always enabling every skill: it reduces
+conflicting instructions and preserves the limited local-model context window.
+Each installed skill remains independently replaceable through its `skill.json`
+manifest.
+
 Every `.gguf` file in `models/language/` appears in the **Reasoning model**
 selector. Changing the selection stops the current local reasoning server and
 loads the chosen model with the next question. The choice is saved in

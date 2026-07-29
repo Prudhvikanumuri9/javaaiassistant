@@ -23,6 +23,8 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.nio.file.Files;
 import java.util.UUID;
@@ -55,6 +57,7 @@ public class AssistantController {
 
     @GetMapping("/status")
     Map<String, Object> status() {
+        List<Skill> installedSkills = SkillLoader.load(appHome.resolve("skills"));
         return Map.of(
                 "available", provider.available(),
                 "provider", provider.name(),
@@ -64,7 +67,9 @@ public class AssistantController {
                 "visionModels", vision.models(),
                 "selectedVisionModel", vision.selectedModel(),
                 "voiceUploadAvailable", transcriber.available(),
-                "speechOutputAvailable", speaker.available()
+                "speechOutputAvailable", speaker.available(),
+                "skills", installedSkills.stream()
+                        .map(skill -> new SkillView(skill.id(), skill.name(), skill.description())).toList()
         );
     }
 
@@ -156,7 +161,7 @@ public class AssistantController {
                 householdContext(), java.time.Instant.now()));
         List<ChatMessage> stored = conversations.messages(conversationId);
         history.addAll(stored.subList(Math.max(0, stored.size() - 16), stored.size()));
-        List<Skill> skills = SkillLoader.load(appHome.resolve("skills"));
+        List<Skill> skills = selectedSkills(text, request.selectedSkillIds(), request.autoSkills());
         String reply = provider.reply(history, skills).get(4, TimeUnit.MINUTES);
         conversations.addMessage(conversationId, ChatMessage.Role.ASSISTANT, reply);
         return new MessageView("assistant", reply);
@@ -176,7 +181,7 @@ public class AssistantController {
                 householdContext(), java.time.Instant.now()));
         List<ChatMessage> stored = conversations.messages(conversationId);
         history.addAll(stored.subList(Math.max(0, stored.size() - 16), stored.size()));
-        List<Skill> skills = SkillLoader.load(appHome.resolve("skills"));
+        List<Skill> skills = selectedSkills(text, request.selectedSkillIds(), request.autoSkills());
         SseEmitter emitter = new SseEmitter(TimeUnit.MINUTES.toMillis(5));
         provider.streamReply(history, skills, token -> {
             try {
@@ -240,15 +245,32 @@ public class AssistantController {
         return context.toString();
     }
 
+    private List<Skill> selectedSkills(String message, List<String> requestedIds, Boolean auto) {
+        List<Skill> installed = SkillLoader.load(appHome.resolve("skills"));
+        if (Boolean.TRUE.equals(auto)) {
+            String normalized = message.toLowerCase(Locale.ROOT);
+            return installed.stream().filter(skill -> {
+                String searchable = (skill.id() + " " + skill.name() + " " + skill.description())
+                        .toLowerCase(Locale.ROOT);
+                return java.util.Arrays.stream(searchable.split("[^a-z0-9]+"))
+                        .filter(word -> word.length() >= 4).anyMatch(normalized::contains);
+            }).toList();
+        }
+        Set<String> ids = requestedIds == null ? Set.of() : Set.copyOf(requestedIds);
+        return installed.stream().filter(skill -> ids.contains(skill.id())).toList();
+    }
+
     private static String validConversationId(String value) {
         String id = value == null || value.isBlank() ? DEFAULT_CONVERSATION : value.trim();
         if (!id.matches("[A-Za-z0-9-]{1,80}")) throw new IllegalArgumentException("Invalid conversation id");
         return id;
     }
 
-    public record ChatRequest(String message, String conversationId) {}
+    public record ChatRequest(String message, String conversationId,
+                              List<String> selectedSkillIds, Boolean autoSkills) {}
     public record ModelRequest(String filename) {}
     public record SpeechRequest(String text) {}
+    public record SkillView(String id, String name, String description) {}
     public record MessageView(String role, String content) {}
 
     @ExceptionHandler(IllegalStateException.class)

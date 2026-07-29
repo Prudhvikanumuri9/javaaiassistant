@@ -533,6 +533,17 @@ retain link labels while removing destinations, remove visual formatting and
 emoji, normalize whitespace, and limit unexpectedly long synthesis requests.
 Edit the properties while the app is stopped and restart it afterward.
 
+### 11.15 Web assistant skill selection
+
+The AI assistant header contains an always-active **Home inventory** capability
+and controls for optional installed skills. Leave **Auto skills** enabled for
+normal use. It activates skills whose name, ID, or description matches the
+question. Turn Auto off to select multiple skills manually.
+
+Avoid selecting unrelated skills together. Every selected prompt consumes part
+of the local model's context window and conflicting instructions can reduce
+answer quality. Browser skill preferences are local to that browser/device.
+
 Do not use LAN mode on office, public, hotel, or guest Wi-Fi. Never forward
 port 8787 through the router or expose it to the internet.
 

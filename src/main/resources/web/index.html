@@ -47,6 +47,13 @@
               <button type="button" class="secondary" id="new-chat">New chat</button>
               <button type="button" class="secondary" id="clear-chat">Clear chat</button>
             </div>
+            <div class="skill-controls">
+              <span class="builtin-skill" title="Always active for household questions">✓ Home inventory</span>
+              <label class="auto-skills"><input id="auto-skills" type="checkbox" checked> Auto skills</label>
+              <label class="skill-picker">Additional skills
+                <select id="skill-picker" multiple aria-label="Select one or more assistant skills"></select>
+              </label>
+            </div>
             <div class="model-pickers">
             <label class="model-picker">Reasoning model<select id="reasoning-model"></select></label>
             <label class="model-picker">Vision model<select id="vision-model"></select></label>
