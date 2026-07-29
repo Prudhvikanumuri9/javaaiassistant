@@ -37,9 +37,16 @@ public final class PiperSpeechSynthesizer implements AutoCloseable {
         return CompletableFuture.runAsync(() -> synthesizeAndPlay(text));
     }
 
+    public CompletableFuture<Path> synthesize(String text, Path output) {
+        return CompletableFuture.supplyAsync(() -> synthesizeFile(text, output));
+    }
+
     private void synthesizeAndPlay(String text) {
+        playUnchecked(synthesizeFile(text, logs.resolve("spoken-reply.wav")));
+    }
+
+    private Path synthesizeFile(String text, Path wave) {
         if (!available()) throw new IllegalStateException("Text-to-speech runtime or voice is missing.");
-        Path wave = logs.resolve("spoken-reply.wav");
         try {
             Files.createDirectories(logs);
             Process process = new ProcessBuilder(
@@ -58,9 +65,17 @@ public final class PiperSpeechSynthesizer implements AutoCloseable {
             if (process.exitValue() != 0 || !Files.isRegularFile(wave)) {
                 throw new IOException("Piper failed. See " + logs.resolve("piper.log"));
             }
-            play(wave);
+            return wave;
         } catch (Exception e) {
             throw new IllegalStateException("Cannot speak response: " + e.getMessage(), e);
+        }
+    }
+
+    private void playUnchecked(Path wave) {
+        try {
+            play(wave);
+        } catch (Exception e) {
+            throw new IllegalStateException("Cannot play response: " + e.getMessage(), e);
         }
     }
 
@@ -93,4 +108,3 @@ public final class PiperSpeechSynthesizer implements AutoCloseable {
         }
     }
 }
-

@@ -9,7 +9,11 @@
 .chat-bubble.pending { color: var(--muted); font-style: italic; }
 .assistant-compose { display: block; padding: 16px; border-top: 1px solid var(--line); }
 .assistant-compose textarea { resize: vertical; }
-.compose-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+.compose-actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; margin-top: 10px; flex-wrap: wrap; }
+.speak-toggle { flex-direction: row; align-items: center; margin-right: auto; }
+.speak-toggle input { width: auto; }
+.voice-status { min-height: 18px; margin-top: 8px; color: var(--muted); font-size: 11px; }
+#voice-record.recording { color: white; background: #a4462c; border-color: #a4462c; }
 .assistant-disclaimer { margin: 0; padding: 0 18px 16px; color: var(--muted); font-size: 11px; }
 @media (max-width: 600px) {
   .model-picker { min-width: 100%; }

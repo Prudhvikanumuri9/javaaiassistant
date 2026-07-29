@@ -488,6 +488,21 @@ close browser tabs that cached an old PIN.
 certificate shows as trusted without a warning, and camera permission is
 enabled for the site in the phone's browser settings.
 
+**Web assistant voice input is unavailable:** confirm the bundled Whisper
+runtime and model are present, the page uses trusted HTTPS, and microphone
+permission is enabled for the site. Select **Start talking**, speak, and then
+select **Stop**. The transcript is placed in the chat box for review before it
+is submitted.
+
+**Spoken replies are unavailable:** confirm the bundled Piper runtime, `.onnx`
+voice, and matching `.onnx.json` file are present. Enable **Speak replies** on
+the AI assistant page. Mobile browser autoplay policies may require the first
+interaction with the page before audio playback is allowed.
+
+Web voice recordings are encoded as 16 kHz mono PCM WAV in the browser,
+transcribed locally, and deleted from the PC immediately afterward. Piper
+output files are likewise deleted after being returned to the browser.
+
 Do not use LAN mode on office, public, hotel, or guest Wi-Fi. Never forward
 port 8787 through the router or expose it to the internet.
 

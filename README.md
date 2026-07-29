@@ -6,6 +6,8 @@ The default experience is now a local Spring Boot home organizer at
 - Camera capture and photo-backed household inventory
 - Protected local-AI chat with inventory, meal, and shopping context
 - Independent reasoning-model and vision-model selectors
+- Local web push-to-talk transcription through bundled Whisper
+- Optional locally generated spoken replies through bundled Piper
 - Quantities, storage locations, minimum stock, and expiration dates
 - Weekly cooking and meal planning
 - A shopping list calculated from planned ingredients minus current inventory
@@ -26,6 +28,19 @@ loads the chosen model with the next question. The choice is saved in
 Vision is a separate provider and selector backed by `models/vision/`; captured
 images are never sent to the reasoning model. A compatible local vision runtime
 and model must be installed before automatic image labels become available.
+
+### Web assistant voice
+
+On the **AI assistant** page:
+
+1. Select **Start talking** and allow microphone permission.
+2. Speak, then select **Stop**.
+3. Whisper transcribes the browser-generated 16 kHz mono WAV locally.
+4. Review the text and select **Ask assistant**.
+5. Enable **Speak replies** to synthesize answers locally with Piper.
+
+Audio travels only between the browser and this PC over the configured HTTPS
+connection. It is deleted after transcription or playback generation.
 
 Start the packaged application:
 

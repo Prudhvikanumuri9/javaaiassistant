@@ -4,6 +4,8 @@ import dev.personalassistant.home.HomeDatabase;
 import dev.personalassistant.data.Database;
 import dev.personalassistant.provider.LocalModelProvider;
 import dev.personalassistant.provider.LocalVisionProvider;
+import dev.personalassistant.voice.PiperSpeechSynthesizer;
+import dev.personalassistant.voice.WhisperTranscriber;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
@@ -37,6 +39,18 @@ public class HomeWebApplication {
     LocalVisionProvider localVisionProvider() {
         Path home = Path.of(System.getProperty("personalassistant.home", ".")).toAbsolutePath();
         return new LocalVisionProvider(home);
+    }
+
+    @Bean
+    WhisperTranscriber whisperTranscriber() {
+        Path home = Path.of(System.getProperty("personalassistant.home", ".")).toAbsolutePath();
+        return new WhisperTranscriber(home);
+    }
+
+    @Bean(destroyMethod = "close")
+    PiperSpeechSynthesizer piperSpeechSynthesizer() {
+        Path home = Path.of(System.getProperty("personalassistant.home", ".")).toAbsolutePath();
+        return new PiperSpeechSynthesizer(home);
     }
 
     @EventListener(ApplicationReadyEvent.class)

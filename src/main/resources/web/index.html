@@ -52,7 +52,13 @@
           </div>
           <form id="assistant-form" class="assistant-compose">
             <textarea name="message" rows="2" required placeholder="What can I cook with what I have?"></textarea>
-            <div class="compose-actions"><button type="submit" class="primary" id="assistant-send">Ask assistant</button></div>
+            <div class="compose-actions">
+              <label class="speak-toggle"><input id="speak-replies" type="checkbox"> Speak replies</label>
+              <button type="button" class="secondary" id="voice-record">🎙 Start talking</button>
+              <button type="button" class="secondary" id="voice-stop" hidden>■ Stop</button>
+              <button type="submit" class="primary" id="assistant-send">Ask assistant</button>
+            </div>
+            <div id="voice-status" class="voice-status">Microphone audio is transcribed locally by Whisper.</div>
           </form>
           <p class="assistant-disclaimer">Runs locally. It can read household context; changes still require confirmation in the relevant screen.</p>
         </div>
@@ -109,5 +115,6 @@
   </dialog>
   <div id="toast" role="status"></div>
   <script src="/app.js"></script>
+  <script src="/voice.js"></script>
 </body>
 </html>
