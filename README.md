@@ -19,8 +19,27 @@ The browser opens automatically. Use `java -jar personal-assistant.jar --no-brow
 when starting it from a service or terminal-only session. The original JavaFX chat
 interface remains available with `java -jar personal-assistant.jar --desktop`.
 
-The server listens only on `127.0.0.1`, so other devices cannot access household
-data. LAN/mobile access will be added later together with authentication and HTTPS.
+By default, the server listens only on `127.0.0.1`, so other devices cannot
+access household data. The HTTPS setup below explicitly enables trusted LAN access.
+
+## HTTPS access from a phone
+
+The portable package includes scripts for trusted local HTTPS. First find the
+computer's Wi-Fi IPv4 address with `ipconfig`, then run:
+
+```cmd
+cd target\PersonalAssistant
+setup-https.cmd 192.168.1.25
+run-https.cmd
+```
+
+Replace `192.168.1.25` with the computer's actual address. Install
+`config\personal-assistant-ca.cer` as a trusted CA certificate on the phone,
+then browse to `https://192.168.1.25:8787`. Full phone instructions are in
+[INSTALL.md](INSTALL.md).
+
+HTTPS LAN mode currently has no user login. Use it only on a trusted private
+home network and never forward port 8787 through the router.
 
 A Java 21, local-first desktop assistant MVP. It includes a JavaFX chat UI,
 SQLite conversation and memory storage, installable skills, configurable

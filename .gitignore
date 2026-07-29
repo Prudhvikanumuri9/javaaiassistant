@@ -8,3 +8,7 @@ portable/data/*.db
 portable/logs/*.log
 /config/
 /data/
+portable/config/https.p12
+portable/config/local-ca.p12
+portable/config/personal-assistant-ca.cer
+portable/config/https.properties

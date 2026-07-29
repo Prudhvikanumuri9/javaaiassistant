@@ -20,7 +20,9 @@ public class HomeWebApplication {
 
     @EventListener(ApplicationReadyEvent.class)
     void openBrowser() {
-        URI address = URI.create("http://127.0.0.1:8787");
+        String scheme = Boolean.parseBoolean(System.getenv().getOrDefault("PA_HTTPS", "false"))
+                ? "https" : "http";
+        URI address = URI.create(scheme + "://127.0.0.1:8787");
         System.out.println("Personal Assistant Home is running at " + address);
         if (!Boolean.parseBoolean(System.getProperty("personalassistant.open-browser", "true"))) return;
         if (Desktop.isDesktopSupported()) {

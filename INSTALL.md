@@ -239,9 +239,89 @@ mvn clean package
 
 ## 10. Component sources and licenses
 
+## 11. Secure mobile access over the local network
+
+The camera API requires a trusted HTTPS connection on mobile browsers. The
+portable package can create a private certificate authority used only by your
+home installation.
+
+### 11.1 Create the certificates
+
+On the PC, run `ipconfig` and find the IPv4 address of the active Wi-Fi adapter.
+Then open Command Prompt in the packaged `PersonalAssistant` directory:
+
+```cmd
+setup-https.cmd 192.168.1.25
+```
+
+Replace the example address with the PC's actual address. If the router later
+assigns the PC a different address, reserve the address in the router or run
+the setup script again using the new address.
+
+The script creates:
+
+```text
+config\https.p12
+config\local-ca.p12
+config\https.properties
+config\personal-assistant-ca.cer
+```
+
+Keep the `.p12` and `.properties` files private. Never commit or share them.
+
+### 11.2 Trust the certificate on Android
+
+Copy `config\personal-assistant-ca.cer` to the phone. The exact menu varies by
+manufacturer, but it is normally under:
+
+```text
+Settings > Security > Encryption & credentials > Install a certificate > CA certificate
+```
+
+Select the copied certificate and acknowledge that it is a private local CA.
+Use this only on a phone you control.
+
+### 11.3 Trust the certificate on iPhone or iPad
+
+Send `personal-assistant-ca.cer` to the device and open it to install the
+profile. Then open:
+
+```text
+Settings > General > About > Certificate Trust Settings
+```
+
+Enable full trust for `Personal Assistant Local CA`.
+
+### 11.4 Start and connect
+
+Start secure LAN mode:
+
+```cmd
+run-https.cmd
+```
+
+Or double-click `run-https.cmd`. Keep its terminal window open. On the phone,
+while connected to the same private Wi-Fi, open:
+
+```text
+https://192.168.1.25:8787
+```
+
+Allow camera permission when prompted.
+
+If Windows Firewall blocks the connection, allow Java on **Private networks**
+or run this once from an Administrator Command Prompt:
+
+```cmd
+netsh advfirewall firewall add rule name="Personal Assistant HTTPS" dir=in action=allow protocol=TCP localport=8787 profile=private
+```
+
+The application currently has no LAN login. Do not use HTTPS LAN mode on
+public, office, hotel, or guest Wi-Fi, and do not forward port 8787 through
+the router. Authentication is the next recommended security feature.
+
 Exact model/runtime download locations and license information are documented
 in:
 
 - `docs/LOCAL_MODEL.md`
 - `docs/LOCAL_VOICE.md`
-
