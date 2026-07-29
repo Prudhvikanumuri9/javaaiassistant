@@ -6,6 +6,7 @@ import dev.personalassistant.provider.LocalModelProvider;
 import dev.personalassistant.provider.LocalVisionProvider;
 import dev.personalassistant.voice.PiperSpeechSynthesizer;
 import dev.personalassistant.voice.WhisperTranscriber;
+import dev.personalassistant.voice.SpeechTextSanitizer;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
@@ -51,6 +52,12 @@ public class HomeWebApplication {
     PiperSpeechSynthesizer piperSpeechSynthesizer() {
         Path home = Path.of(System.getProperty("personalassistant.home", ".")).toAbsolutePath();
         return new PiperSpeechSynthesizer(home);
+    }
+
+    @Bean
+    SpeechTextSanitizer speechTextSanitizer() {
+        Path home = Path.of(System.getProperty("personalassistant.home", ".")).toAbsolutePath();
+        return new SpeechTextSanitizer(home.resolve("config/voice-filter.properties"));
     }
 
     @EventListener(ApplicationReadyEvent.class)

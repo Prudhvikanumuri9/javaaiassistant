@@ -9,9 +9,11 @@ import dev.personalassistant.skill.Skill;
 import dev.personalassistant.skill.SkillLoader;
 import dev.personalassistant.voice.PiperSpeechSynthesizer;
 import dev.personalassistant.voice.WhisperTranscriber;
+import dev.personalassistant.voice.SpeechTextSanitizer;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.file.Path;
@@ -35,17 +37,19 @@ public class AssistantController {
     private final LocalVisionProvider vision;
     private final WhisperTranscriber transcriber;
     private final PiperSpeechSynthesizer speaker;
+    private final SpeechTextSanitizer speechSanitizer;
     private final Path appHome;
 
     AssistantController(Database conversations, HomeDatabase home, LocalModelProvider provider,
                         LocalVisionProvider vision, WhisperTranscriber transcriber,
-                        PiperSpeechSynthesizer speaker) {
+                        PiperSpeechSynthesizer speaker, SpeechTextSanitizer speechSanitizer) {
         this.conversations = conversations;
         this.home = home;
         this.provider = provider;
         this.vision = vision;
         this.transcriber = transcriber;
         this.speaker = speaker;
+        this.speechSanitizer = speechSanitizer;
         this.appHome = Path.of(System.getProperty("personalassistant.home", ".")).toAbsolutePath();
     }
 
@@ -88,8 +92,9 @@ public class AssistantController {
     @PostMapping(value = "/speech", produces = "audio/wav")
     ResponseEntity<byte[]> speech(@RequestBody SpeechRequest request) throws Exception {
         if (!speaker.available()) throw new IllegalStateException("Local Piper voice is not installed.");
-        String text = request.text() == null ? "" : request.text().trim();
-        if (text.isBlank() || text.length() > 4000) throw new IllegalArgumentException("Speech text is invalid.");
+        String text = speechSanitizer.sanitize(request.text());
+        if (text.isBlank()) throw new IllegalArgumentException(
+                "The response contains no speakable text after voice cleanup.");
         Path wave = appHome.resolve("data/speech-web-" + UUID.randomUUID() + ".wav");
         try {
             speaker.synthesize(text, wave).get(1, TimeUnit.MINUTES);
@@ -155,6 +160,53 @@ public class AssistantController {
         String reply = provider.reply(history, skills).get(4, TimeUnit.MINUTES);
         conversations.addMessage(conversationId, ChatMessage.Role.ASSISTANT, reply);
         return new MessageView("assistant", reply);
+    }
+
+    @PostMapping(value = "/chat-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    SseEmitter streamChat(@RequestBody ChatRequest request) {
+        String text = request.message() == null ? "" : request.message().trim();
+        if (text.isBlank()) throw new IllegalArgumentException("Message is required");
+        if (!provider.available()) throw new IllegalStateException("The bundled local model is unavailable.");
+        String conversationId = validConversationId(request.conversationId());
+        synchronized (this) {
+            conversations.addMessage(conversationId, ChatMessage.Role.USER, text);
+        }
+        List<ChatMessage> history = new ArrayList<>();
+        history.add(new ChatMessage(0, conversationId, ChatMessage.Role.SYSTEM,
+                householdContext(), java.time.Instant.now()));
+        List<ChatMessage> stored = conversations.messages(conversationId);
+        history.addAll(stored.subList(Math.max(0, stored.size() - 16), stored.size()));
+        List<Skill> skills = SkillLoader.load(appHome.resolve("skills"));
+        SseEmitter emitter = new SseEmitter(TimeUnit.MINUTES.toMillis(5));
+        provider.streamReply(history, skills, token -> {
+            try {
+                emitter.send(SseEmitter.event().name("token").data(Map.of("text", token)));
+            } catch (Exception e) {
+                throw new java.util.concurrent.CompletionException(e);
+            }
+        }).whenComplete((reply, error) -> {
+            try {
+                if (error != null) {
+                    emitter.send(SseEmitter.event().name("error")
+                            .data(Map.of("message", rootMessage(error))));
+                } else {
+                    synchronized (this) {
+                        conversations.addMessage(conversationId, ChatMessage.Role.ASSISTANT, reply);
+                    }
+                    emitter.send(SseEmitter.event().name("done").data(Map.of("text", reply)));
+                }
+                emitter.complete();
+            } catch (Exception sendFailure) {
+                emitter.completeWithError(sendFailure);
+            }
+        });
+        return emitter;
+    }
+
+    private static String rootMessage(Throwable error) {
+        Throwable current = error;
+        while (current.getCause() != null) current = current.getCause();
+        return current.getMessage() == null ? "Local generation failed." : current.getMessage();
     }
 
     private String householdContext() {

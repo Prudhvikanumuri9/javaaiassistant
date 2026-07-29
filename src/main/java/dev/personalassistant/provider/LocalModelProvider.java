@@ -20,6 +20,7 @@ import java.util.Locale;
 import java.util.Properties;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public final class LocalModelProvider implements AssistantProvider {
@@ -68,6 +69,49 @@ public final class LocalModelProvider implements AssistantProvider {
     @Override
     public CompletableFuture<String> reply(List<ChatMessage> history, List<Skill> skills) {
         return CompletableFuture.supplyAsync(() -> generate(history, skills));
+    }
+
+    public CompletableFuture<String> streamReply(List<ChatMessage> history, List<Skill> skills,
+                                                 Consumer<String> tokenConsumer) {
+        return CompletableFuture.supplyAsync(() -> generateStream(history, skills, tokenConsumer));
+    }
+
+    private String generateStream(List<ChatMessage> history, List<Skill> skills,
+                                  Consumer<String> tokenConsumer) {
+        if (!available()) throw new IllegalStateException("Local runtime or GGUF model is missing beside the application.");
+        try {
+            ensureServer();
+            ObjectNode body = requestBody(history, skills);
+            body.put("stream", true);
+            HttpRequest request = HttpRequest.newBuilder(COMPLETIONS).timeout(Duration.ofMinutes(4))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body))).build();
+            HttpResponse<Stream<String>> response = http.send(request, HttpResponse.BodyHandlers.ofLines());
+            if (response.statusCode() / 100 != 2) throw new IOException("llama.cpp returned HTTP " + response.statusCode());
+            StringBuilder complete = new StringBuilder();
+            try (Stream<String> lines = response.body()) {
+                lines.filter(line -> line.startsWith("data: ")).map(line -> line.substring(6))
+                        .filter(data -> !"[DONE]".equals(data)).forEach(data -> {
+                            try {
+                                String token = JSON.readTree(data).path("choices").path(0)
+                                        .path("delta").path("content").asText("");
+                                if (!token.isEmpty()) {
+                                    complete.append(token);
+                                    tokenConsumer.accept(token);
+                                }
+                            } catch (IOException e) {
+                                throw new CompletionException(e);
+                            }
+                        });
+            }
+            if (complete.toString().isBlank()) throw new IOException("The local model returned an empty response.");
+            return complete.toString().trim();
+        } catch (IOException e) {
+            throw new CompletionException(e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new CompletionException(e);
+        }
     }
 
     public List<String> models() {
@@ -135,24 +179,7 @@ public final class LocalModelProvider implements AssistantProvider {
         }
         try {
             ensureServer();
-            ObjectNode requestBody = JSON.createObjectNode();
-            requestBody.put("model", model.getFileName().toString());
-            requestBody.put("temperature", 0.7);
-            requestBody.put("max_tokens", 512);
-            ArrayNode messages = requestBody.putArray("messages");
-            ObjectNode system = messages.addObject();
-            system.put("role", "system");
-            StringBuilder systemContent = new StringBuilder(systemPrompt(skills));
-            history.stream()
-                    .filter(message -> message.role() == ChatMessage.Role.SYSTEM)
-                    .forEach(message -> systemContent.append("\n\n").append(message.content()));
-            system.put("content", systemContent.toString());
-            for (ChatMessage message : history) {
-                if (message.role() == ChatMessage.Role.SYSTEM) continue;
-                ObjectNode item = messages.addObject();
-                item.put("role", message.role() == ChatMessage.Role.USER ? "user" : "assistant");
-                item.put("content", message.content());
-            }
+            ObjectNode requestBody = requestBody(history, skills);
             HttpRequest request = HttpRequest.newBuilder(COMPLETIONS)
                     .timeout(Duration.ofMinutes(3))
                     .header("Content-Type", "application/json")
@@ -172,6 +199,27 @@ public final class LocalModelProvider implements AssistantProvider {
             Thread.currentThread().interrupt();
             throw new CompletionException(e);
         }
+    }
+
+    private ObjectNode requestBody(List<ChatMessage> history, List<Skill> skills) {
+        ObjectNode body = JSON.createObjectNode();
+        body.put("model", model.getFileName().toString());
+        body.put("temperature", 0.7);
+        body.put("max_tokens", 1024);
+        ArrayNode messages = body.putArray("messages");
+        ObjectNode system = messages.addObject();
+        system.put("role", "system");
+        StringBuilder systemContent = new StringBuilder(systemPrompt(skills));
+        history.stream().filter(message -> message.role() == ChatMessage.Role.SYSTEM)
+                .forEach(message -> systemContent.append("\n\n").append(message.content()));
+        system.put("content", systemContent.toString());
+        for (ChatMessage message : history) {
+            if (message.role() == ChatMessage.Role.SYSTEM) continue;
+            ObjectNode item = messages.addObject();
+            item.put("role", message.role() == ChatMessage.Role.USER ? "user" : "assistant");
+            item.put("content", message.content());
+        }
+        return body;
     }
 
     private synchronized void ensureServer() throws IOException, InterruptedException {

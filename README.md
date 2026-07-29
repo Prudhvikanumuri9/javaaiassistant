@@ -48,6 +48,12 @@ On the **AI assistant** page:
 Audio travels only between the browser and this PC over the configured HTTPS
 connection. It is deleted after transcription or playback generation.
 
+Long responses stream into the chat as the local model produces tokens. With
+**Speak replies** enabled, complete non-code sentences are cleaned and queued
+through Piper while later text is still being generated. Configure cleanup in
+`config/voice-filter.properties`; fenced code, inline code, URLs, HTML,
+Markdown markers, emoji/symbols, and overlong text are filtered by default.
+
 Start the packaged application:
 
 ```powershell

@@ -2,6 +2,8 @@
   let stream, context, source, processor;
   let chunks = [];
   let inputRate = 48000;
+  let speechQueue = Promise.resolve();
+  let streamRaw = "", streamIndex = 0, streamSpeakable = "", insideCode = false;
   const record = document.querySelector("#voice-record");
   const stop = document.querySelector("#voice-stop");
   const status = document.querySelector("#voice-status");
@@ -123,6 +125,59 @@
     } catch (error) {
       setStatus(`Spoken reply failed: ${error.message}`);
     }
+  };
+
+  function enqueueSpeech(text) {
+    if (!document.querySelector("#speak-replies").checked || !text.trim()) return;
+    speechQueue = speechQueue.then(async () => {
+      setStatus("Speaking streamed response locally…");
+      const response = await fetch("/api/assistant/speech", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text })
+      });
+      if (!response.ok) throw new Error((await response.json()).error || "Speech generation failed");
+      const url = URL.createObjectURL(await response.blob());
+      await new Promise((resolve, reject) => {
+        const audio = new Audio(url);
+        audio.onended = resolve;
+        audio.onerror = reject;
+        audio.play().catch(reject);
+      });
+      URL.revokeObjectURL(url);
+    }).catch(error => setStatus(`Spoken reply failed: ${error.message}`));
+  }
+
+  function releaseSentences(force = false) {
+    while (streamSpeakable.length) {
+      const match = streamSpeakable.match(/^([\s\S]*?[.!?])(?:\s+|$)/);
+      if (!match && !force && streamSpeakable.length < 320) return;
+      const length = match ? match[0].length : Math.min(streamSpeakable.length, 320);
+      enqueueSpeech(streamSpeakable.slice(0, length).trim());
+      streamSpeakable = streamSpeakable.slice(length);
+      if (!force && !match) return;
+    }
+  }
+
+  window.beginStreamingSpeech = () => {
+    streamRaw = ""; streamIndex = 0; streamSpeakable = ""; insideCode = false;
+  };
+  window.pushStreamingSpeech = token => {
+    streamRaw += token;
+    while (streamIndex < streamRaw.length) {
+      if (streamRaw.length - streamIndex < 3 && streamRaw[streamIndex] === "`") break;
+      if (streamRaw.startsWith("```", streamIndex) || streamRaw.startsWith("~~~", streamIndex)) {
+        insideCode = !insideCode;
+        streamIndex += 3;
+        continue;
+      }
+      if (!insideCode) streamSpeakable += streamRaw[streamIndex];
+      streamIndex++;
+    }
+    releaseSentences(false);
+  };
+  window.finishStreamingSpeech = () => {
+    if (!insideCode && streamIndex < streamRaw.length) streamSpeakable += streamRaw.slice(streamIndex);
+    streamIndex = streamRaw.length;
+    releaseSentences(true);
   };
 
   record.addEventListener("click", startRecording);

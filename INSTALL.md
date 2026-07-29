@@ -503,6 +503,36 @@ Web voice recordings are encoded as 16 kHz mono PCM WAV in the browser,
 transcribed locally, and deleted from the PC immediately afterward. Piper
 output files are likewise deleted after being returned to the browser.
 
+### 11.14 Streaming responses and voice cleanup
+
+Assistant responses stream into the browser as they are generated. When
+**Speak replies** is enabled, completed sentences are synthesized and played
+in order instead of waiting for the full response. Text inside fenced code
+blocks is never placed in the speech queue.
+
+Speech cleanup is configured outside the JAR:
+
+```text
+config\voice-filter.properties
+```
+
+Default configuration:
+
+```properties
+skipFencedCode=true
+skipInlineCode=true
+removeUrls=true
+removeHtml=true
+removeMarkdown=true
+removeSymbols=true
+maxCharacters=2000
+```
+
+These rules follow common speech-output practices: exclude non-prose content,
+retain link labels while removing destinations, remove visual formatting and
+emoji, normalize whitespace, and limit unexpectedly long synthesis requests.
+Edit the properties while the app is stopped and restart it afterward.
+
 Do not use LAN mode on office, public, hotel, or guest Wi-Fi. Never forward
 port 8787 through the router or expose it to the internet.
 
