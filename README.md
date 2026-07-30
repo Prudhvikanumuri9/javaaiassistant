@@ -3,6 +3,9 @@
 The default experience is now a local Spring Boot home organizer at
 `http://127.0.0.1:8787`. It includes:
 
+For the optional CUDA-enabled Qwen3-14B reasoning baseline, see the separate
+[Windows NVIDIA GPU setup](docs/GPU_SETUP.md).
+
 - Camera capture or image upload with photo-backed household inventory
 - Inventory-aware local recipe recommendations with confirmed meal-plan actions
 - Protected local-AI chat with inventory, meal, and shopping context

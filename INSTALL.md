@@ -17,6 +17,11 @@ and spoken replies run locally.
 
 Windows ARM is not currently supported.
 
+For an NVIDIA GPU and the Qwen3-14B local reasoning baseline, complete the
+normal installation first, then follow the separate
+[Windows NVIDIA GPU setup](docs/GPU_SETUP.md). The GPU guide contains the exact
+downloads, Command Prompt commands, verification, tuning, and CPU rollback.
+
 For camera-based household item recognition and label OCR, complete the normal
 installation first and then follow [Local vision, OCR, and inventory scanning](docs/LOCAL_VISION.md).
 The guide includes the exact Windows command, download links, file sizes,

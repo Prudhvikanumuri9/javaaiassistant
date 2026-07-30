@@ -1,0 +1,27 @@
+[
+  {
+    "name": "inventory lookup",
+    "prompt": "What ingredients do I have at home right now?",
+    "expectedAny": ["inventory.list"]
+  },
+  {
+    "name": "available recipe search",
+    "prompt": "What can I cook with the ingredients I already have?",
+    "expectedAny": ["recipes.findByAvailableIngredients"]
+  },
+  {
+    "name": "verified recipe lookup",
+    "prompt": "What ingredients and steps do I need for Crispy Corn?",
+    "expectedAny": ["recipes.get"]
+  },
+  {
+    "name": "meal proposal",
+    "prompt": "Plan Crispy Corn for dinner tonight.",
+    "expectedAll": ["recipes.get", "meal_plan.propose"]
+  },
+  {
+    "name": "no tool for general conversation",
+    "prompt": "Tell me a short joke.",
+    "expectedAll": []
+  }
+]

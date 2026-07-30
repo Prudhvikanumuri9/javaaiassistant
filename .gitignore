@@ -9,6 +9,10 @@ portable/logs/*.log
 portable/data/*.pid
 .runtime-backup*/
 portable/models/vision/*.gguf
+portable/models/language/Qwen3-14B-*.gguf
+portable/native/windows-x64/ggml-cuda*.dll
+portable/native/windows-x64/cublas*.dll
+portable/native/windows-x64/cudart*.dll
 /config/
 /data/
 portable/config/https.p12

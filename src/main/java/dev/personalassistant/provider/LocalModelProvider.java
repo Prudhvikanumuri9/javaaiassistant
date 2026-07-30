@@ -35,6 +35,7 @@ public final class LocalModelProvider implements AssistantProvider {
     private final Path executable;
     private volatile Path model;
     private final Path selectionFile;
+    private final Path inferenceFile;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
     private Process server;
 
@@ -44,6 +45,7 @@ public final class LocalModelProvider implements AssistantProvider {
         String executableName = platform.os().equals("windows") ? "llama-server.exe" : "llama-server";
         this.executable = home.resolve("native").resolve(platform.nativeDirectory()).resolve(executableName);
         this.selectionFile = home.resolve("config/model-selection.properties");
+        this.inferenceFile = home.resolve("config/inference.properties");
         this.model = loadSelectedModel();
     }
 
@@ -79,53 +81,98 @@ public final class LocalModelProvider implements AssistantProvider {
 
     public record ToolCall(String name, String query) {}
 
-    /**
-     * A constrained model turn in which the model selects read-only application tools.
-     * Java validates the returned names before anything is executed.
-     */
+    /** Uses llama.cpp's OpenAI-compatible native function-calling endpoint. */
     public CompletableFuture<List<ToolCall>> planTools(String userMessage) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 ensureServer();
-                ObjectNode body = JSON.createObjectNode();
+                ObjectNode body = nativeToolRequest(userMessage);
                 body.put("model", model.getFileName().toString());
-                body.put("temperature", 0);
-                body.put("max_tokens", 240);
-                body.putObject("response_format").put("type", "json_object");
-                ArrayNode messages = body.putArray("messages");
-                messages.addObject().put("role", "system").put("content", """
-                        You are a tool planner. Select zero or more tools needed to answer the user.
-                        Return only compact JSON: {"calls":[{"name":"tool.name","query":"optional search"}]}.
-                        Allowed tools:
-                        inventory.list - current household inventory and quantities
-                        recipes.findByAvailableIngredients - rank recipes using current inventory
-                        recipes.get - get a named recipe's ingredients, equipment, and steps; query is recipe name
-                        meal_plan.propose - ONLY when the user explicitly asks to plan, schedule, or add a meal;
-                        query is the recipe name. This proposes a write but does not execute it.
-                        Use no other names. Never answer the user in this turn.
-                        """);
-                messages.addObject().put("role", "user").put("content", userMessage);
                 HttpRequest request = HttpRequest.newBuilder(COMPLETIONS).timeout(Duration.ofMinutes(3))
                         .header("Content-Type", "application/json")
                         .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body))).build();
                 HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() / 100 != 2) throw new IOException("Tool planner HTTP " + response.statusCode());
-                String content = JSON.readTree(response.body()).path("choices").path(0)
-                        .path("message").path("content").asText();
-                JsonNode calls = JSON.readTree(content).path("calls");
-                List<ToolCall> result = new ArrayList<>();
-                if (calls.isArray()) for (JsonNode call : calls) {
-                    String name = call.path("name").asText("");
-                    if (name.equals("inventory.list") || name.equals("recipes.findByAvailableIngredients")
-                            || name.equals("recipes.get") || name.equals("meal_plan.propose")) {
-                        result.add(new ToolCall(name, call.path("query").asText("").trim()));
-                    }
-                }
-                return List.copyOf(result);
+                return parseNativeToolCalls(response.body());
             } catch (Exception error) {
                 throw new CompletionException(error);
             }
         });
+    }
+
+    static ObjectNode nativeToolRequest(String userMessage) {
+        ObjectNode body = JSON.createObjectNode();
+        body.put("model", "local-model");
+        body.put("temperature", 0);
+        body.put("max_tokens", 320);
+        body.put("tool_choice", "auto");
+        body.put("parallel_tool_calls", false);
+        ArrayNode messages = body.putArray("messages");
+        messages.addObject().put("role", "system").put("content", """
+                /no_think
+                Select tools only when they are needed. Read requests may use read tools.
+                meal_plan_propose is allowed only when the user explicitly asks to plan,
+                schedule, prepare, or have a meal. It proposes a change and never executes it.
+                """);
+        messages.addObject().put("role", "user").put("content", userMessage);
+        ArrayNode tools = body.putArray("tools");
+        addTool(tools, "inventory_list",
+                "Read current household inventory and quantities.", false);
+        addTool(tools, "recipes_find_by_available_ingredients",
+                "Rank verified recipes against current inventory.", false);
+        addTool(tools, "recipes_get",
+                "Read a named verified recipe, equipment, ingredients, and steps.", true);
+        addTool(tools, "meal_plan_propose",
+                "Propose adding a named recipe to the meal plan; requires user confirmation.", true);
+        return body;
+    }
+
+    private static void addTool(ArrayNode tools, String name, String description, boolean queryRequired) {
+        ObjectNode function = tools.addObject().put("type", "function").putObject("function");
+        function.put("name", name);
+        function.put("description", description);
+        ObjectNode parameters = function.putObject("parameters");
+        parameters.put("type", "object");
+        parameters.put("additionalProperties", false);
+        ObjectNode properties = parameters.putObject("properties");
+        if (queryRequired) {
+            properties.putObject("query").put("type", "string")
+                    .put("description", "Exact recipe name");
+            parameters.putArray("required").add("query");
+        }
+    }
+
+    static List<ToolCall> parseNativeToolCalls(String responseBody) throws IOException {
+        JsonNode message = JSON.readTree(responseBody).path("choices").path(0).path("message");
+        JsonNode calls = message.path("tool_calls");
+        List<ToolCall> result = new ArrayList<>();
+        if (!calls.isArray()) return List.of();
+        for (JsonNode call : calls) {
+            JsonNode function = call.has("function") ? call.path("function") : call;
+            String name = internalToolName(function.path("name").asText(""));
+            if (name == null) continue;
+            JsonNode arguments = function.path("arguments");
+            if (arguments.isTextual() && !arguments.asText().isBlank()) {
+                try {
+                    arguments = JSON.readTree(arguments.asText());
+                } catch (IOException invalidArguments) {
+                    continue;
+                }
+            }
+            result.add(new ToolCall(name, arguments.path("query").asText("").trim()));
+        }
+        return List.copyOf(result);
+    }
+
+    private static String internalToolName(String name) {
+        return switch (name) {
+            case "inventory_list", "inventory.list" -> "inventory.list";
+            case "recipes_find_by_available_ingredients", "recipes.findByAvailableIngredients" ->
+                    "recipes.findByAvailableIngredients";
+            case "recipes_get", "recipes.get" -> "recipes.get";
+            case "meal_plan_propose", "meal_plan.propose" -> "meal_plan.propose";
+            default -> null;
+        };
     }
 
     private String generateStream(List<ChatMessage> history, List<Skill> skills,
@@ -278,10 +325,13 @@ public final class LocalModelProvider implements AssistantProvider {
         if (server != null && server.isAlive() && healthy()) return;
         Files.createDirectories(home.resolve("logs"));
         Path log = home.resolve("logs/llama-server.log");
+        InferenceSettings settings = loadInferenceSettings();
         server = new ProcessBuilder(
                 executable.toString(), "--model", model.toString(),
                 "--host", "127.0.0.1", "--port", Integer.toString(PORT),
-                "--ctx-size", "4096", "--parallel", "1", "--no-webui")
+                "--ctx-size", Integer.toString(settings.contextSize()),
+                "--parallel", "1", "--gpu-layers", Integer.toString(settings.gpuLayers()),
+                "--flash-attn", settings.flashAttention(), "--jinja", "--no-webui")
                 .directory(executable.getParent().toFile())
                 .redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.appendTo(log.toFile()))
@@ -296,6 +346,38 @@ public final class LocalModelProvider implements AssistantProvider {
         server.destroy();
         throw new IOException("Local model startup timed out. See " + log);
     }
+
+    private InferenceSettings loadInferenceSettings() {
+        Properties values = new Properties();
+        if (Files.isRegularFile(inferenceFile)) {
+            try (var input = Files.newInputStream(inferenceFile)) {
+                values.load(input);
+            } catch (IOException error) {
+                throw new IllegalStateException("Cannot read inference settings " + inferenceFile, error);
+            }
+        }
+        Path cuda = executable.getParent().resolve(
+                detectPlatform().os().equals("windows") ? "ggml-cuda.dll" : "libggml-cuda.so");
+        int automaticGpuLayers = Files.isRegularFile(cuda) ? 99 : 0;
+        return new InferenceSettings(
+                boundedInt(values, "contextSize", 8192, 2048, 32768),
+                boundedInt(values, "gpuLayers", automaticGpuLayers, 0, 999),
+                switch (values.getProperty("flashAttention", "auto").trim().toLowerCase(Locale.ROOT)) {
+                    case "on", "off" -> values.getProperty("flashAttention").trim().toLowerCase(Locale.ROOT);
+                    default -> "auto";
+                });
+    }
+
+    private static int boundedInt(Properties values, String key, int fallback, int minimum, int maximum) {
+        try {
+            return Math.max(minimum, Math.min(maximum,
+                    Integer.parseInt(values.getProperty(key, Integer.toString(fallback)).trim())));
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+    }
+
+    record InferenceSettings(int contextSize, int gpuLayers, String flashAttention) {}
 
     private boolean healthy() {
         try {
