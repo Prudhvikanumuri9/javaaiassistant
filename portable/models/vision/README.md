@@ -2,10 +2,11 @@
 
 Vision models are intentionally separate from `models/language`.
 
-Place compatible `.gguf` or `.onnx` vision model files in this directory. They
-will appear in the web application's **Vision model** selector. Selecting a
-file does not send images to the reasoning model.
+Run `setup-vision.cmd` from the portable application's root to install and
+verify the recommended Qwen2.5-VL model plus its `mmproj` vision projector.
+See `docs/LOCAL_VISION.md` in the source repository for download sources,
+checksums, requirements, and usage.
 
-The runtime adapter and a recommended downloadable model will be documented
-when the local vision engine is bundled. Until then, camera capture and manual
-labels continue to work, and the UI reports vision inference as unavailable.
+Main model files appear in the web application's **Vision model** selector.
+Files beginning with `mmproj-` are paired automatically and are not selectable.
+Camera images stay local and are never sent to the separate reasoning model.

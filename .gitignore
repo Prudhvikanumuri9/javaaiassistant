@@ -6,6 +6,9 @@ PersonalAssistant/data/*.db
 PersonalAssistant/logs/*.log
 portable/data/*.db
 portable/logs/*.log
+portable/data/*.pid
+.runtime-backup*/
+portable/models/vision/*.gguf
 /config/
 /data/
 portable/config/https.p12

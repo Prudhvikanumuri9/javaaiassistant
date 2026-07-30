@@ -90,7 +90,7 @@
             <form id="meal-form">
               <label>Date<input name="mealDate" type="date" required></label>
               <label>Meal<select name="mealType"><option>Breakfast</option><option>Lunch</option><option selected>Dinner</option><option>Snack</option></select></label>
-              <label class="wide">Recipe or meal<input name="recipeName" required placeholder="Vegetable pasta"></label>
+              <label class="wide">Verified recipe<select name="recipeName" required><option value="">Select a verified recipe</option></select></label>
               <label>Servings<input name="servings" type="number" min="1" value="2"></label>
               <label class="wide">Ingredients <small>one per line: name | quantity | unit</small><textarea name="ingredients" rows="6" placeholder="pasta | 1 | box&#10;tomato sauce | 2 | jar"></textarea></label>
               <label class="wide">Notes<textarea name="notes" rows="2"></textarea></label>
@@ -101,7 +101,8 @@
         </div>
       </section>
       <section class="view" id="shopping">
-        <div class="page-title"><div><p class="eyebrow">ONLY WHAT'S MISSING</p><h2>Shopping list</h2><p id="shopping-week"></p></div><button class="secondary" id="copy-shopping">Copy list</button></div>
+        <div class="page-title"><div><p class="eyebrow">ONLY WHAT'S MISSING</p><h2>Shopping list</h2><p id="shopping-week"></p></div><div><button class="secondary" id="copy-shopping">Copy list</button> <button class="secondary" id="clear-shopping">Remove all</button></div></div>
+        <form id="shopping-form" class="shopping-form"><label>Item<input name="name" required placeholder="Chili sauce"></label><button class="primary" type="submit">Add item</button></form>
         <div class="shopping-note">Calculated from your weekly meals minus matching inventory quantities.</div>
         <div id="shopping-list" class="shopping-list"></div>
       </section>
@@ -113,20 +114,26 @@
       <input name="id" type="hidden">
       <div class="camera-box">
         <video id="camera-video" playsinline autoplay hidden></video><img id="photo-preview" alt="Captured item" hidden>
-        <div id="camera-placeholder"><strong>Take a quick photo</strong><span>Use your selected webcam to catalog this item.</span></div>
+        <div id="camera-placeholder"><strong>Take or upload a photo</strong><span>Use your camera or choose an existing image to scan household items.</span></div>
         <canvas id="camera-canvas" hidden></canvas>
-        <div class="camera-actions"><button type="button" class="secondary" id="start-camera">Start camera</button><button type="button" class="primary" id="capture-photo" hidden>Capture</button></div>
+        <input id="upload-photo" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+        <div class="camera-actions"><button type="button" class="secondary" id="start-camera">Start camera</button><button type="button" class="secondary" id="retake-photo" hidden>Take another photo</button><button type="button" class="secondary" id="choose-photo">Choose image</button><button type="button" class="primary" id="capture-photo" hidden>Capture</button><button type="button" class="primary" id="analyze-photo" hidden>Scan items &amp; read labels</button></div>
       </div>
+      <div id="vision-status" class="vision-status" role="status" hidden></div>
+      <div id="vision-results" class="vision-results" hidden></div>
       <div class="form-grid">
         <label class="wide">Item name<input name="name" required placeholder="Basmati rice"></label>
         <label>Category<input name="category" placeholder="Pantry"></label><label>Location<input name="location" placeholder="Kitchen cabinet"></label>
-        <label>Quantity<input name="quantity" type="number" min="0" step="0.01" value="1"></label><label>Unit<input name="unit" placeholder="bag, lb, count"></label>
+        <label>Quantity<input name="quantity" type="number" min="0" step="0.01" value="1"></label><label>Standard unit<select name="unit"><option>each</option><option>g</option><option>kg</option><option>oz</option><option>lb</option><option>ml</option><option>l</option><option>tsp</option><option>tbsp</option><option>cup</option><option>can</option><option>jar</option><option>bottle</option><option>bag</option><option>package</option></select></label>
         <label>Minimum quantity<input name="minQuantity" type="number" min="0" step="0.01" value="0"></label><label>Expires on<input name="expiresOn" type="date"></label>
         <label class="wide">Notes<textarea name="notes" rows="3"></textarea></label>
       </div>
       <div class="dialog-actions"><button type="button" class="secondary" data-close>Cancel</button><button type="submit" class="primary">Save item</button></div>
     </form>
   </dialog>
+  <div id="loading-overlay" class="loading-overlay" hidden aria-live="polite" aria-busy="true">
+    <div class="loading-card"><span class="loading-spinner"></span><strong id="loading-message">Saving changes...</strong></div>
+  </div>
   <div id="toast" role="status"></div>
   <script src="/app.js"></script>
   <script src="/voice.js"></script>

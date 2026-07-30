@@ -21,6 +21,7 @@ import java.util.Properties;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.ArrayList;
 import java.util.stream.Stream;
 
 public final class LocalModelProvider implements AssistantProvider {
@@ -74,6 +75,57 @@ public final class LocalModelProvider implements AssistantProvider {
     public CompletableFuture<String> streamReply(List<ChatMessage> history, List<Skill> skills,
                                                  Consumer<String> tokenConsumer) {
         return CompletableFuture.supplyAsync(() -> generateStream(history, skills, tokenConsumer));
+    }
+
+    public record ToolCall(String name, String query) {}
+
+    /**
+     * A constrained model turn in which the model selects read-only application tools.
+     * Java validates the returned names before anything is executed.
+     */
+    public CompletableFuture<List<ToolCall>> planTools(String userMessage) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                ensureServer();
+                ObjectNode body = JSON.createObjectNode();
+                body.put("model", model.getFileName().toString());
+                body.put("temperature", 0);
+                body.put("max_tokens", 240);
+                body.putObject("response_format").put("type", "json_object");
+                ArrayNode messages = body.putArray("messages");
+                messages.addObject().put("role", "system").put("content", """
+                        You are a tool planner. Select zero or more tools needed to answer the user.
+                        Return only compact JSON: {"calls":[{"name":"tool.name","query":"optional search"}]}.
+                        Allowed tools:
+                        inventory.list - current household inventory and quantities
+                        recipes.findByAvailableIngredients - rank recipes using current inventory
+                        recipes.get - get a named recipe's ingredients, equipment, and steps; query is recipe name
+                        meal_plan.propose - ONLY when the user explicitly asks to plan, schedule, or add a meal;
+                        query is the recipe name. This proposes a write but does not execute it.
+                        Use no other names. Never answer the user in this turn.
+                        """);
+                messages.addObject().put("role", "user").put("content", userMessage);
+                HttpRequest request = HttpRequest.newBuilder(COMPLETIONS).timeout(Duration.ofMinutes(3))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body))).build();
+                HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() / 100 != 2) throw new IOException("Tool planner HTTP " + response.statusCode());
+                String content = JSON.readTree(response.body()).path("choices").path(0)
+                        .path("message").path("content").asText();
+                JsonNode calls = JSON.readTree(content).path("calls");
+                List<ToolCall> result = new ArrayList<>();
+                if (calls.isArray()) for (JsonNode call : calls) {
+                    String name = call.path("name").asText("");
+                    if (name.equals("inventory.list") || name.equals("recipes.findByAvailableIngredients")
+                            || name.equals("recipes.get") || name.equals("meal_plan.propose")) {
+                        result.add(new ToolCall(name, call.path("query").asText("").trim()));
+                    }
+                }
+                return List.copyOf(result);
+            } catch (Exception error) {
+                throw new CompletionException(error);
+            }
+        });
     }
 
     private String generateStream(List<ChatMessage> history, List<Skill> skills,

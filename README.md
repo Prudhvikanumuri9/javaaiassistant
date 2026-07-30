@@ -3,7 +3,8 @@
 The default experience is now a local Spring Boot home organizer at
 `http://127.0.0.1:8787`. It includes:
 
-- Camera capture and photo-backed household inventory
+- Camera capture or image upload with photo-backed household inventory
+- Inventory-aware local recipe recommendations with confirmed meal-plan actions
 - Protected local-AI chat with inventory, meal, and shopping context
 - Independent reasoning-model and vision-model selectors
 - Local web push-to-talk transcription through bundled Whisper
@@ -40,6 +41,11 @@ Selective activation is preferable to always enabling every skill: it reduces
 conflicting instructions and preserves the limited local-model context window.
 Each installed skill remains independently replaceable through its `skill.json`
 manifest.
+
+Cooking requests now invoke an executable local recipe matcher. The assistant
+can compare recipes with live inventory, explain shortages, and propose planning
+a meal. Database changes occur only after **Confirm action** is selected. See
+[Executable assistant skills](docs/EXECUTABLE_SKILLS.md).
 
 Every `.gguf` file in `models/language/` appears in the **Reasoning model**
 selector. Changing the selection stops the current local reasoning server and
@@ -105,6 +111,16 @@ network and never forward port 8787 through the router.
 Run setup only once. Normal starts require only `run-https.cmd`. Re-running
 setup with the same IP preserves the existing certificate and PIN. Use
 `setup-https.cmd YOUR_PC_IP --force` only when intentionally replacing them.
+
+`start-assistant.cmd` runs in the current window by default; press `Ctrl+C` to
+stop. Use `start-assistant.cmd --background` for detached operation, and
+`stop-assistant.cmd` to stop either mode. Run the stop command before rebuilding
+so Windows releases the bundled native AI DLLs.
+
+On the first start for a source checkout, use
+`start-assistant.cmd YOUR_PC_IP`. The launcher preserves HTTPS files under
+`portable\config`, outside the disposable Maven `target` directory, and restores
+them automatically after later clean builds.
 
 A Java 21, local-first desktop assistant MVP. It includes a JavaFX chat UI,
 SQLite conversation and memory storage, installable skills, configurable

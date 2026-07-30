@@ -36,7 +36,7 @@ public class HomeWebApplication {
         return new LocalModelProvider(home);
     }
 
-    @Bean
+    @Bean(destroyMethod = "close")
     LocalVisionProvider localVisionProvider() {
         Path home = Path.of(System.getProperty("personalassistant.home", ".")).toAbsolutePath();
         return new LocalVisionProvider(home);

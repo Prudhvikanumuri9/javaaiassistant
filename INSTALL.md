@@ -17,6 +17,19 @@ and spoken replies run locally.
 
 Windows ARM is not currently supported.
 
+For camera-based household item recognition and label OCR, complete the normal
+installation first and then follow [Local vision, OCR, and inventory scanning](docs/LOCAL_VISION.md).
+The guide includes the exact Windows command, download links, file sizes,
+checksums, RAM guidance, and the add/update inventory workflow.
+
+The built-in cooking tool requires no additional installation. Ask the AI
+assistant “What can I cook tonight?” to compare the local recipe catalog with
+current inventory. Meal-plan changes and resulting shopping shortages require
+an explicit **Confirm action**. See
+[Executable assistant skills](docs/EXECUTABLE_SKILLS.md).
+For a deliberately incomplete sample pantry and one-at-a-time verification,
+follow [Cooking tool test guide](docs/COOKING_TEST_GUIDE.md).
+
 ## 2. Install Java 21
 
 Check the installed Java version:
@@ -394,18 +407,60 @@ Verify that the rule exists:
 netsh advfirewall firewall show rule name="Personal Assistant HTTPS"
 ```
 
-### 11.9 Daily startup
+### 11.9 Daily start and stop
 
-For every normal start, use only:
+The default launcher runs in the current command window so startup messages and
+logs remain visible:
 
 ```cmd
 cd /d D:\workspace\AIAPPS\target\PersonalAssistant
-run-https.cmd
+start-assistant.cmd
 ```
 
-Do not run `setup-https.cmd` during daily startup. Keep the command window open;
-closing it stops the server. The launcher displays the current URL, username,
-and PIN.
+Press `Ctrl+C` in that window to stop the application.
+
+If HTTPS has not been configured on this checkout, supply the LAN IP once:
+
+```cmd
+start-assistant.cmd 10.0.0.12
+```
+
+In a source checkout, the launcher preserves the generated certificate, PIN,
+and HTTPS settings under `portable\config` and restores them after future
+`mvn clean package` builds. The IP argument is optional on later starts and
+does not regenerate an existing valid configuration. Do not use `--force`
+unless the LAN IP actually changes.
+
+The launcher displays the URL, username, and PIN. To have the command return
+immediately without keeping a command window open, add the background flag:
+
+```cmd
+start-assistant.cmd --background
+```
+
+On the first HTTPS start, the IP and flag can be combined:
+
+```cmd
+start-assistant.cmd 10.0.0.12 --background
+```
+
+Background mode returns immediately and writes console output under `logs`.
+To stop either mode and its local AI engines cleanly before rebuilding, use:
+
+```cmd
+cd /d D:\workspace\AIAPPS\target\PersonalAssistant
+stop-assistant.cmd
+```
+
+Always run `stop-assistant.cmd` before `mvn clean package`; otherwise Windows
+can keep native DLLs locked. The stop script uses the saved application PID and
+only stops `llama-server.exe` instances loaded from this portable directory. It
+does not stop unrelated Java or llama.cpp applications.
+
+`run-https.cmd` remains as a compatible foreground launcher, but
+`start-assistant.cmd` is the recommended command.
+
+Do not run `setup-https.cmd` during daily startup.
 
 On the phone, open:
 

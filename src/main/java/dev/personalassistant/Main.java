@@ -6,6 +6,7 @@ import dev.personalassistant.provider.LocalModelProvider;
 import dev.personalassistant.skill.SkillLoader;
 import dev.personalassistant.ui.AssistantApp;
 import dev.personalassistant.web.HomeWebApplication;
+import dev.personalassistant.home.HomeDatabase;
 import javafx.application.Application;
 import org.springframework.boot.SpringApplication;
 
@@ -23,6 +24,16 @@ public final class Main {
         }
         SkillLoader.load(home.resolve("skills"));
         LocalModelProvider.detectPlatform();
+        if (java.util.Arrays.asList(args).contains("--seed-cooking-test-data")) {
+            try (HomeDatabase homeDatabase = new HomeDatabase(home.resolve("data/home.db"))) {
+                var added = homeDatabase.seedCookingTestInventory();
+                System.out.println("Cooking test inventory ready. Added " + added.size()
+                        + " missing sample item(s); existing records were preserved.");
+                System.out.println("Intentionally absent: chili sauce, vinegar, spring onions, paprika, "
+                        + "baking powder, chicken, frozen sweet corn, white pepper, beaten egg, coriander.");
+            }
+            return;
+        }
         if (java.util.Arrays.asList(args).contains("--desktop")) {
             Application.launch(AssistantApp.class, args);
             return;

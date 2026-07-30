@@ -15,6 +15,8 @@ public final class SpeechTextSanitizer {
     private static final Pattern URL = Pattern.compile("(?i)\\b(?:https?://|www\\.)[^\\s<>()]+(?<![.,!?;:])");
     private static final Pattern HTML = Pattern.compile("(?s)<[^>]+>");
     private static final Pattern MARKDOWN = Pattern.compile("(?m)^\\s{0,3}(?:#{1,6}|[-+*]>?|\\d+[.)])\\s+|[*_~]{1,3}");
+    private static final Pattern KEYCAP = Pattern.compile("[0-9#*]\\uFE0F?\\u20E3");
+    private static final Pattern DECORATIVE_NUMBER = Pattern.compile("[\\u2070-\\u209F]");
 
     private final Settings settings;
 
@@ -33,19 +35,30 @@ public final class SpeechTextSanitizer {
         if (settings.removeHtml()) text = HTML.matcher(text).replaceAll(" ");
         if (settings.removeMarkdown()) text = MARKDOWN.matcher(text).replaceAll("");
         text = text.replace("&", " and ");
-        if (settings.removeSymbols()) text = removeUnicodeSymbols(text);
+        if (settings.removeDecorativeCharacters()) {
+            // Composite keycap emoji contain an ordinary digit. Remove the complete
+            // sequence first so speech engines do not pronounce the leftover digit.
+            text = KEYCAP.matcher(text).replaceAll(" ");
+            text = DECORATIVE_NUMBER.matcher(text).replaceAll(" ");
+        }
+        if (settings.removeSymbols()) text = removeUnicodeSymbols(text, settings.removeDecorativeCharacters());
         text = text.replaceAll("[\\p{Cc}\\p{Cf}&&[^\\r\\n\\t]]", " ")
                 .replaceAll("\\s+", " ")
                 .replaceAll("\\s+([,.;:!?])", "$1").trim();
         return limit(text, settings.maxCharacters());
     }
 
-    private static String removeUnicodeSymbols(String text) {
+    private static String removeUnicodeSymbols(String text, boolean removeDecorativeCharacters) {
         StringBuilder result = new StringBuilder(text.length());
         text.codePoints().forEach(codePoint -> {
             int type = Character.getType(codePoint);
+            boolean enclosedOrDecorativeNumber = removeDecorativeCharacters
+                    && ((codePoint >= 0x2460 && codePoint <= 0x24FF)
+                    || (codePoint >= 0x2776 && codePoint <= 0x2793)
+                    || (codePoint >= 0x1F100 && codePoint <= 0x1F1FF));
             if (type != Character.MATH_SYMBOL && type != Character.CURRENCY_SYMBOL
-                    && type != Character.MODIFIER_SYMBOL && type != Character.OTHER_SYMBOL) {
+                    && type != Character.MODIFIER_SYMBOL && type != Character.OTHER_SYMBOL
+                    && type != Character.ENCLOSING_MARK && !enclosedOrDecorativeNumber) {
                 result.appendCodePoint(codePoint);
             }
         });
@@ -61,7 +74,7 @@ public final class SpeechTextSanitizer {
 
     record Settings(boolean skipFencedCode, boolean skipInlineCode, boolean removeUrls,
                     boolean removeHtml, boolean removeMarkdown, boolean removeSymbols,
-                    int maxCharacters) {
+                    boolean removeDecorativeCharacters, int maxCharacters) {
         static Settings load(Path path) {
             Properties values = new Properties();
             if (Files.isRegularFile(path)) {
@@ -78,6 +91,7 @@ public final class SpeechTextSanitizer {
                     bool(values, "removeHtml", true),
                     bool(values, "removeMarkdown", true),
                     bool(values, "removeSymbols", true),
+                    bool(values, "removeDecorativeCharacters", true),
                     Math.max(200, Math.min(10_000, integer(values, "maxCharacters", 2000))));
         }
 

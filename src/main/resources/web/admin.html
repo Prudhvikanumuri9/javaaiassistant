@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hearth Recipe Administration</title>
+  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+  <header class="admin-header">
+    <div><p class="eyebrow">HIDDEN ADMINISTRATION</p><h1>Recipe database</h1></div>
+    <a class="secondary link-button" href="/overview">Return to Hearth</a>
+  </header>
+  <main class="admin-layout">
+    <aside class="recipe-sidebar panel">
+      <div class="sidebar-title"><h2>Recipes</h2><button id="new-recipe" class="secondary">New draft</button></div>
+      <label>Filter
+        <select id="recipe-filter"><option value="all">All</option><option value="draft">Drafts</option><option value="verified">Verified</option></select>
+      </label>
+      <div id="recipe-list"></div>
+    </aside>
+    <section class="panel editor">
+      <form id="recipe-form">
+        <input name="id" type="hidden" value="0">
+        <div class="editor-heading">
+          <div><p class="eyebrow">HUMAN REVIEW REQUIRED</p><h2 id="editor-title">Select a recipe</h2></div>
+          <label class="verify-control"><input name="verified" type="checkbox"> Verified and available to meal planning</label>
+        </div>
+        <div class="form-grid">
+          <label class="wide">Recipe name<input name="name" required></label>
+          <label>Category<input name="category"></label>
+          <label>Servings<input name="servings" type="number" min="1" value="2"></label>
+          <label>Cooking time in minutes<input name="minutes" type="number" min="1" value="30"></label>
+          <label class="wide">Ingredients <small>one per line: name | quantity | unit</small>
+            <textarea name="ingredients" rows="9" placeholder="paneer | 220 | g"></textarea>
+          </label>
+          <label class="wide">Equipment <small>one item per line</small><textarea name="equipment" rows="5"></textarea></label>
+          <label class="wide">Steps <small>one step per line</small><textarea name="steps" rows="9"></textarea></label>
+          <label class="wide">Source file or reference<input name="sourcePath"></label>
+          <label class="wide">Extraction and review notes<textarea name="extractionNotes" rows="5"></textarea></label>
+        </div>
+        <div class="save-row">
+          <span id="save-status">AI suggestions remain drafts until you verify and save them.</span>
+          <button type="submit" class="primary">Save recipe</button>
+        </div>
+      </form>
+      <section class="ai-panel">
+        <div><p class="eyebrow">LOCAL AI ASSISTANCE</p><h3>Draft ingredients and cooking plan</h3>
+          <p>Describe the dish, corrections, source material, or desired servings. Review every generated value before saving.</p></div>
+        <textarea id="ai-instructions" rows="4" placeholder="Use the existing Chili Paneer draft and improve the ingredient quantities for 3 servings..."></textarea>
+        <button id="ai-draft" class="secondary">Generate editable draft</button>
+        <div id="ai-status" role="status"></div>
+      </section>
+      <section class="ai-panel">
+        <div><p class="eyebrow">PUBLISHED CONVERSION POLICY</p><h3>Inventory and recipe measurement rules</h3>
+          <p>Exact unit-family conversions are automatic. Approximate rules are labeled and cross-family mass/volume guesses are refused.</p></div>
+        <div id="unit-rules"></div>
+      </section>
+    </section>
+  </main>
+  <div id="toast" role="status"></div>
+  <script src="/admin.js"></script>
+</body>
+</html>

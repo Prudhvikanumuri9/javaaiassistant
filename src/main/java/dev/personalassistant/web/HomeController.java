@@ -72,6 +72,12 @@ public class HomeController {
                 to == null ? today.plusDays(6).toString() : to);
     }
 
+    @GetMapping("/api/recipes")
+    List<HomeDatabase.Recipe> verifiedRecipes() {
+        return database.recipes().stream()
+                .filter(recipe -> database.isRecipeVerified(recipe.name())).toList();
+    }
+
     @PostMapping("/api/meals")
     Meal addMeal(@RequestBody Meal meal) {
         return database.saveMeal(meal);
@@ -83,9 +89,65 @@ public class HomeController {
         return Map.of("ok", true);
     }
 
+    @GetMapping("/api/meals/{id}/completion-preview")
+    HomeDatabase.MealCompletion completionPreview(@PathVariable long id) {
+        return database.previewMealCompletion(id);
+    }
+
+    @PostMapping("/api/meals/{id}/complete")
+    HomeDatabase.MealCompletion completeMeal(@PathVariable long id) {
+        return database.completeMeal(id);
+    }
+
+    @GetMapping("/api/units")
+    Map<String, Object> units(@RequestParam(required = false, defaultValue = "") String name,
+                              @RequestParam(required = false, defaultValue = "") String category) {
+        return Map.of("units", HomeDatabase.supportedUnits(),
+                "suggested", HomeDatabase.suggestedUnit(name, category),
+                "rules", HomeDatabase.unitRules());
+    }
+
     @GetMapping("/api/shopping")
     List<HomeDatabase.ShoppingEntry> shopping(@RequestParam String from, @RequestParam String to) {
         return database.shoppingList(from, to);
+    }
+
+    @PostMapping("/api/shopping")
+    HomeDatabase.ManualShoppingItem addShopping(@RequestBody ShoppingRequest request) {
+        return database.addShoppingItem(request.name(), request.quantity(), request.unit());
+    }
+
+    @PutMapping("/api/shopping")
+    HomeDatabase.ManualShoppingItem editShopping(@RequestBody ShoppingEditRequest request) {
+        return database.editShoppingItem(request.id(), request.originalName(), request.name(),
+                request.quantity(), request.unit());
+    }
+
+    @PostMapping("/api/shopping/purchase")
+    Item purchaseShopping(@RequestBody ShoppingPurchaseRequest request) {
+        return database.purchaseShoppingItem(request.id(), request.name(),
+                request.quantity(), request.unit(), request.mode());
+    }
+
+    @GetMapping("/api/shopping/inventory-match")
+    Map<String, Object> shoppingInventoryMatch(@RequestParam String name) {
+        Item item = database.matchingInventoryItem(name);
+        return item == null ? Map.of("found", false) : Map.of(
+                "found", true, "id", item.id(), "name", item.name(),
+                "quantity", item.quantity(), "unit", item.unit());
+    }
+
+    @DeleteMapping("/api/shopping")
+    Map<String, Boolean> removeShopping(@RequestParam(defaultValue = "0") long id,
+                                        @RequestParam(required = false) String name) {
+        database.removeShoppingItem(id, name);
+        return Map.of("ok", true);
+    }
+
+    @DeleteMapping("/api/shopping/all")
+    Map<String, Boolean> clearShopping(@RequestParam String from, @RequestParam String to) {
+        database.clearShoppingList(from, to);
+        return Map.of("ok", true);
     }
 
     @GetMapping(value = "/photos/{filename}", produces = MediaType.IMAGE_JPEG_VALUE)
@@ -105,6 +167,12 @@ public class HomeController {
         Files.write(photos.resolve(filename), bytes);
         return filename;
     }
+
+    public record ShoppingRequest(String name, double quantity, String unit) {}
+    public record ShoppingEditRequest(long id, String originalName, String name,
+                                      double quantity, String unit) {}
+    public record ShoppingPurchaseRequest(long id, String name, double quantity,
+                                          String unit, String mode) {}
 
     @ExceptionHandler(IllegalArgumentException.class)
     ResponseEntity<Map<String, String>> badRequest(IllegalArgumentException error) {
