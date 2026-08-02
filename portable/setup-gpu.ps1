@@ -15,7 +15,7 @@ $release = 'b10152'
 $cudaArchive = "llama-$release-bin-win-cuda-12.4-x64.zip"
 $cudaRuntimeArchive = 'cudart-llama-bin-win-cuda-12.4-x64.zip'
 $releaseBase = "https://github.com/ggml-org/llama.cpp/releases/download/$release"
-$modelUrl = "https://huggingface.co/Qwen/Qwen3-14B-GGUF/resolve/main/$modelName?download=true"
+$modelUrl = "https://huggingface.co/Qwen/Qwen3-14B-GGUF/resolve/main/${modelName}?download=true"
 $workDirectory = Join-Path ([System.IO.Path]::GetTempPath()) ("personal-assistant-gpu-" + [guid]::NewGuid())
 
 function Download-File([string]$Url, [string]$Destination) {
