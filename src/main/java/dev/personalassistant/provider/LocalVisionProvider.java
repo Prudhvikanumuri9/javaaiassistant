@@ -106,7 +106,11 @@ public final class LocalVisionProvider implements AutoCloseable {
         if (imageDataUrl == null || !imageDataUrl.matches("^data:image/(jpeg|jpg|png);base64,.+")) {
             throw new IllegalArgumentException("A JPEG or PNG camera image is required.");
         }
-        if (imageDataUrl.length() > 11_000_000) throw new IllegalArgumentException("Image exceeds 8 MB.");
+        if (imageDataUrl.length() > 11_000_000) {
+            throw new IllegalArgumentException(
+                    "The encoded image exceeds 8 MB. Retake it after this application is updated, "
+                            + "or upload a resized image no larger than 1920 pixels on its longest side.");
+        }
         try {
             LOG.info("Vision scan requested (encoded image size: {} KB, model: {})",
                     imageDataUrl.length() / 1024, selectedModel());

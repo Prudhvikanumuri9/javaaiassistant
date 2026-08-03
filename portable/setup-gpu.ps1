@@ -11,6 +11,7 @@ $modelDirectory = Join-Path $root 'models\language'
 $configDirectory = Join-Path $root 'config'
 $modelName = 'Qwen3-14B-Q4_K_M.gguf'
 $modelPath = Join-Path $modelDirectory $modelName
+$modelExpectedBytes = 9001752960
 $release = 'b10152'
 $cudaArchive = "llama-$release-bin-win-cuda-12.4-x64.zip"
 $cudaRuntimeArchive = 'cudart-llama-bin-win-cuda-12.4-x64.zip'
@@ -64,8 +65,16 @@ try {
     Get-ChildItem -LiteralPath $runtimeExtract -Recurse -File |
         Copy-Item -Destination $nativeDirectory -Force
 
-    if (-not $SkipModel -and ($Force -or -not (Test-Path -LiteralPath $modelPath))) {
-        Download-File $modelUrl $modelPath
+    $modelComplete = (Test-Path -LiteralPath $modelPath) -and
+        ((Get-Item -LiteralPath $modelPath).Length -eq $modelExpectedBytes)
+    if (-not $SkipModel -and ($Force -or -not $modelComplete)) {
+        $temporaryModel = Join-Path $workDirectory $modelName
+        Download-File $modelUrl $temporaryModel
+        $downloadedBytes = (Get-Item -LiteralPath $temporaryModel).Length
+        if ($downloadedBytes -ne $modelExpectedBytes) {
+            throw "Incomplete model download: expected $modelExpectedBytes bytes, received $downloadedBytes bytes."
+        }
+        Move-Item -LiteralPath $temporaryModel -Destination $modelPath -Force
     } elseif ($SkipModel) {
         Write-Host 'Skipping Qwen3-14B model download.'
     } else {
@@ -77,7 +86,8 @@ try {
     Set-Property $inference 'gpuLayers' '99'
     Set-Property $inference 'flashAttention' 'on'
 
-    if (Test-Path -LiteralPath $modelPath) {
+    if ((Test-Path -LiteralPath $modelPath) -and
+            ((Get-Item -LiteralPath $modelPath).Length -eq $modelExpectedBytes)) {
         Set-Property (Join-Path $configDirectory 'model-selection.properties') 'reasoningModel' $modelName
     }
 
